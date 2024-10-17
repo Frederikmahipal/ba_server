@@ -45,18 +45,6 @@ export const login = async (email, password) => {
     return { user, accessToken, refreshToken };
 };
 
-export const refreshAccessToken = async (refreshToken, res) => {
-    try {
-        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-        const accessToken = generateAccessToken(decoded.userId);
-
-        res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
-
-        return { accessToken };
-    } catch (error) {
-        throw new Error("Invalid refresh token");
-    }
-};
 
 export const logout = async (res) => {
     res.clearCookie('accessToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
