@@ -28,8 +28,9 @@ export const loginController = async (req, res) => {
 
 export const logoutController = async (req, res) => {
     try {
-        const result = await logout(res);
-        res.status(200).json(result);
+        res.clearCookie('accessToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
+        res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
+        res.status(200).json({ success: true, message: "Signed out successfully" });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -46,5 +47,5 @@ export const checkAuthController = (req, res) => {
         res.status(200).json({ message: 'Authenticated' });
     } catch (error) {
         res.status(401).json({ message: 'Invalid token' });
-    } 
+    }
 };

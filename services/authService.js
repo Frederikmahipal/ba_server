@@ -50,7 +50,7 @@ export const refreshAccessToken = async (refreshToken, res) => {
         const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
         const accessToken = generateAccessToken(decoded.userId);
 
-        res.cookie('token', accessToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
+        res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
 
         return { accessToken };
     } catch (error) {
@@ -59,6 +59,7 @@ export const refreshAccessToken = async (refreshToken, res) => {
 };
 
 export const logout = async (res) => {
-    res.clearCookie('token', { httpOnly: true, secure: true, sameSite: 'Strict' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
     return { success: true, message: "Signed out successfully" };
 };
