@@ -15,6 +15,5 @@ COPY . .
 
 # Expose port 4000
 EXPOSE 4000
-
 # Start the app in development mode
 CMD ["yarn", "dev"]
