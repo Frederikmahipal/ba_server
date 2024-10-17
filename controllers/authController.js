@@ -19,6 +19,7 @@ export const loginController = async (req, res) => {
         // Set the tokens in the cookies
         res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
         res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
+        console.log('user logged in: ', user);
 
         res.status(200).json({ user, accessToken, refreshToken });
     } catch (err) {
