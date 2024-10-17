@@ -1,4 +1,5 @@
-import { signup, login, googleSignIn, Logout } from '../services/authService.js';
+import { signup, login, logout } from '../services/authService.js';
+import jwt from 'jsonwebtoken';
 
 export const signupController = async (req, res) => {
     try {
@@ -14,44 +15,36 @@ export const loginController = async (req, res) => {
     try {
         const { email, password } = req.body;
         const { user, accessToken, refreshToken } = await login(email, password);
+
+        // Set the tokens in the cookies
+        res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
+        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
+
         res.status(200).json({ user, accessToken, refreshToken });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
 };
 
-export const googleSignInController = async (req, res) => {
-    try {
-        const { idToken } = req.body;
-        const { user, token } = await googleSignIn(idToken);
-        res.status(200).json({ user, token });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-};
-
-export const refreshAccessTokenController = async (req, res) => {
-    try {
-        const { refreshToken } = req.body;
-        const { accessToken } = await refreshAccessToken(refreshToken);
-        res.status(200).json({ accessToken });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-        console.log(err);
-    }
-};
-
-
 export const logoutController = async (req, res) => {
     try {
-        const { authorization } = req.headers;
-        const accessToken = authorization.split(' ')[1];
-        const decoded = jwt.decode(accessToken);
-        const userId = decoded.userId;
-
-        const result = await Logout(userId);
+        const result = await logout(res);
         res.status(200).json(result);
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
+};
+
+export const checkAuthController = (req, res) => {
+    const token = req.cookies.accessToken;
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    try {
+        jwt.verify(token, process.env.JWT_SECRET);
+        res.status(200).json({ message: 'Authenticated' });
+    } catch (error) {
+        res.status(401).json({ message: 'Invalid token' });
+    } 
 };

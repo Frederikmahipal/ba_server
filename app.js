@@ -3,6 +3,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
@@ -11,16 +12,23 @@ const port = 4000;
 
 connectDB();
 
-app.use(cors());
+const corsOptions = {
+    origin: 'http://localhost:3000', // Replace with your frontend's URL
+    credentials: true, // Allow cookies to be sent
+  };
 
+app.use(cookieParser());
+app.use(cors(corsOptions));
 app.use(express.json());
-app.use('/auth', authRoutes);
+app.use(express.urlencoded({ extended: true }));
 
+
+app.use('/auth', authRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
 app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`);
+    console.log(`server listening at http://localhost:${port}`);
 });
