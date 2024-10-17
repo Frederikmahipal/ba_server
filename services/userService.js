@@ -25,3 +25,12 @@ export const updateProfileService = async (userId, profileData) => {
     throw error;
   }
 };
+
+export const searchUsersService = async (query) => {
+  try {
+    const users = await User.find({ name: { $regex: query, $options: 'i' } }); // Case-insensitive search
+    return users;
+  } catch (error) {
+    throw error;
+  }
+};
