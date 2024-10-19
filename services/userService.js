@@ -1,6 +1,6 @@
 import User from '../models/user.js'; // Import the User model
 
-// Service to get user profile
+// Service to get current user profile
 export const getProfileService = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -26,10 +26,22 @@ export const updateProfileService = async (userId, profileData) => {
   }
 };
 
-export const searchUsersService = async (query) => {
+export const searchUsersService = async (query, currentUserId) => {
   try {
-    const users = await User.find({ name: { $regex: query, $options: 'i' } }); // Case-insensitive search
+    const users = await User.find({
+      name: { $regex: query, $options: 'i' },
+      _id: { $ne: currentUserId } // Don't show the current user
+    });
     return users;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getUserInfoService = async (userId) => {
+  try {
+    const user = await User.findById(userId).select('-password');
+    return user;
   } catch (error) {
     throw error;
   }

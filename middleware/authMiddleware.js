@@ -8,9 +8,7 @@ const authenticateUser = async (req, res, next) => {
   }
 
   try {
-    console.log('Token:', token); // Log the token for debugging
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded:', decoded); // Log the decoded token for debugging
     const user = await User.findById(decoded.userId);
     if (!user) {
       throw new Error('User not found');
