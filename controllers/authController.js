@@ -17,8 +17,9 @@ export const loginController = async (req, res) => {
         const { user, accessToken, refreshToken } = await login(email, password);
 
         // Set the tokens in the cookies
-        res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
-        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
+        res.cookie('accessToken', accessToken, { httpOnly: true, secure: false, sameSite: 'Strict', path: '/', expires: new Date(Date.now() + 3600000) }); // 1 hour
+        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: false, sameSite: 'Strict', path: '/', expires: new Date(Date.now() + 2592000000) }); // 30 days
+        console.log('cookie set: ', req.cookies);
         console.log('user logged in: ', user);
 
         res.status(200).json({ user, accessToken, refreshToken });
@@ -29,8 +30,8 @@ export const loginController = async (req, res) => {
 
 export const logoutController = async (req, res) => {
     try {
-        res.clearCookie('accessToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
-        res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
+        res.clearCookie('accessToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
+        res.clearCookie('refreshToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
         res.status(200).json({ success: true, message: "Signed out successfully" });
     } catch (err) {
         res.status(400).json({ error: err.message });

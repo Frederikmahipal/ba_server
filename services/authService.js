@@ -45,9 +45,8 @@ export const login = async (email, password) => {
     return { user, accessToken, refreshToken };
 };
 
-
 export const logout = async (res) => {
-    res.clearCookie('accessToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
     return { success: true, message: "Signed out successfully" };
 };
