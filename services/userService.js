@@ -26,11 +26,12 @@ export const updateProfileService = async (userId, profileData) => {
   }
 };
 
+// Service to search users
 export const searchUsersService = async (query, currentUserId) => {
   try {
     const users = await User.find({
-      name: { $regex: query, $options: 'i' },
-      _id: { $ne: currentUserId } // Don't show the current user
+      name: { $regex: query, $options: 'i' }, // Case-insensitive search
+      _id: { $ne: currentUserId } // Exclude the current user
     });
     return users;
   } catch (error) {
@@ -38,9 +39,13 @@ export const searchUsersService = async (query, currentUserId) => {
   }
 };
 
-export const getUserInfoService = async (userId) => {
+// Service to get another user's profile
+export const getOtherUserProfileService = async (userId) => {
   try {
-    const user = await User.findById(userId).select('-password');
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
     return user;
   } catch (error) {
     throw error;
