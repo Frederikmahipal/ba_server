@@ -1,4 +1,4 @@
-import { signup, login, logout } from '../services/authService.js';
+import { signup, login, logout, checkAuth } from '../services/authService.js';
 import jwt from 'jsonwebtoken';
 
 export const signupController = async (req, res) => {
@@ -17,9 +17,8 @@ export const loginController = async (req, res) => {
         const { user, accessToken, refreshToken } = await login(email, password);
 
         // Set the tokens in the cookies
-        res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
-        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
-        console.log('user logged in: ', user);
+        res.cookie('accessToken', accessToken, { httpOnly: true, secure: false, sameSite: 'Strict', path: '/', expires: new Date(Date.now() + 3600000) }); // 1 hour
+        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: false, sameSite: 'Strict', path: '/', expires: new Date(Date.now() + 2592000000) }); // 30 days
 
         res.status(200).json({ user, accessToken, refreshToken });
     } catch (err) {
@@ -29,24 +28,20 @@ export const loginController = async (req, res) => {
 
 export const logoutController = async (req, res) => {
     try {
-        res.clearCookie('accessToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
-        res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'Strict' });
+        res.clearCookie('accessToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
+        res.clearCookie('refreshToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
         res.status(200).json({ success: true, message: "Signed out successfully" });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
 };
 
-export const checkAuthController = (req, res) => {
+export const checkAuthController = async (req, res) => {
     const token = req.cookies.accessToken;
-    if (!token) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-
     try {
-        jwt.verify(token, process.env.JWT_SECRET);
-        res.status(200).json({ message: 'Authenticated' });
+        const user = await checkAuth(token);
+        res.status(200).json({ user });
     } catch (error) {
-        res.status(401).json({ message: 'Invalid token' });
+        res.status(401).json({ message: error.message });
     }
 };
