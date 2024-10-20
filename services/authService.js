@@ -50,3 +50,20 @@ export const logout = async (res) => {
     res.clearCookie('refreshToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
     return { success: true, message: "Signed out successfully" };
 };
+
+export const checkAuth = async (token) => {
+    if (!token) {
+        throw new Error('Unauthorized');
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+        return user;
+    } catch (error) {
+        throw new Error('Invalid token');
+    }
+};
