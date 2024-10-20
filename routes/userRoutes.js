@@ -1,19 +1,14 @@
 import express from 'express';
-<<<<<<< HEAD
-import { getProfile, updateProfile, searchUsers, getUserInfo } from '../controllers/userController.js';
-=======
 import { getProfile, updateProfile, searchUsers, getOtherUserProfile } from '../controllers/userController.js';
->>>>>>> recovery-branch
 import authenticateUser from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.use(authenticateUser); 
+// Route to get user profile
+router.get('/profile', authenticateUser, getProfile);
 
-router.get('/search', searchUsers);
-router.get('/profile/:userId', getUserInfo);
-router.get('/profile', getProfile);
-router.put('/profile', updateProfile);
+// Route to update user profile
+router.put('/profile', authenticateUser, updateProfile);
 
 // Route to search users
 router.get('/search', authenticateUser, searchUsers);
