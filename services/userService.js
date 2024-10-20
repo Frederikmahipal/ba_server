@@ -1,6 +1,6 @@
 import User from '../models/user.js'; // Import the User model
 
-// Service to get user profile
+// Service to get current user profile
 export const getProfileService = async (userId) => {
   try {
     const user = await User.findById(userId);
