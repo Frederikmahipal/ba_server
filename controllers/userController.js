@@ -46,3 +46,4 @@ export const getOtherUserProfile = async (req, res) => {
     res.status(500).json({ message: 'Error fetching user profile', error });
   }
 };
+// Controller to search artists

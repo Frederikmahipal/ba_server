@@ -3,6 +3,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js'; // Import userRoutes
+import spotifyRoutes from './routes/spotifyRoutes.js'; // Import spotify routes
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/auth', authRoutes);
 app.use('/api/users', userRoutes); // Use userRoutes
+app.use('/api/spotify', spotifyRoutes); // Use spotify routes
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
