@@ -11,9 +11,15 @@ const userSchema = new mongoose.Schema({
         unique: true
     },
     password: {
-        type: String,
-        required: true
+        type: String
     },
+    spotifyId: {
+        type: String,
+        unique: true
+    },
+    accessToken: {
+        type: String
+    }
 }, {
     timestamps: true
 });

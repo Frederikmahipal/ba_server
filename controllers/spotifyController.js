@@ -1,45 +1,42 @@
-// server/controllers/spotifyController.js
-
-import { getAccessToken } from '../config/spotifyAuth.js';
-import { searchArtistsService, getArtistService } from '../services/spotifyService.js';
+import { getClientCredentialsToken } from '../config/spotifyAuth.js';
+import { searchSpotifyService, getArtistService, getArtistAlbumsService, getAlbumService } from '../services/spotifyService.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const clientId = process.env.SPOTIFY_CLIENT_ID;
-const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-
 export const fetchAccessToken = async () => {
   try {
-    return await getAccessToken(clientId, clientSecret);
+    return await getClientCredentialsToken();
   } catch (error) {
     console.error('Error fetching access token:', error);
     throw new Error('Failed to fetch access token');
   }
 };
 
-export const searchArtists = async (req, res) => {
+export const searchSpotify = async (req, res) => {
+  const query = req.query.q || '';
+  const type = req.query.type || 'artist'; // Default to artist if no type is provided
+
   try {
-    const query = req.query.q || '';
     const accessToken = await fetchAccessToken();
+    console.log('accessToken:', accessToken);
     
     if (!query) {
       res.status(200).json([]); // Return empty array if no query
       return;
     }
 
-    const artists = await searchArtistsService(query, accessToken);
-    res.status(200).json(artists);
+    const results = await searchSpotifyService(query, type, accessToken);
+    res.status(200).json(results);
   } catch (error) {
-    console.error('Error searching artists:', error);
+    console.error(`Error searching ${type}:`, error);
     res.status(500).json({ 
-      error: 'Failed to search artists',
+      error: `Failed to search ${type}`,
       message: error.message,
       details: error.response ? error.response.data : null
     });
   }
 };
-
 // New function to get artist details
 export const getArtist = async (req, res) => {
   try {
@@ -57,6 +54,50 @@ export const getArtist = async (req, res) => {
     console.error('Error fetching artist details:', error);
     res.status(500).json({ 
       error: 'Failed to fetch artist details',
+      message: error.message,
+      details: error.response ? error.response.data : null
+    });
+  }
+};
+
+export const getArtistAlbums = async (req, res) => {
+  try {
+    const artistId = req.params.id;
+    const accessToken = await fetchAccessToken();
+
+    if (!artistId) {
+      res.status(400).json({ error: 'Artist ID is required' });
+      return;
+    }
+
+    const artistAlbums = await getArtistAlbumsService(artistId, accessToken);
+    res.status(200).json(artistAlbums);
+  } catch (error) {
+    console.error('Error fetching artist albums:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch artist albums',
+      message: error.message,
+      details: error.response ? error.response.data : null
+    });
+  }
+};
+
+export const getAlbum = async (req, res) => {
+  try {
+    const albumId = req.params.id;
+    const accessToken = await getClientCredentialsToken();
+
+    if (!albumId) {
+      res.status(400).json({ error: 'Album ID is required' });
+      return;
+    }
+
+    const albumDetails = await getAlbumService(albumId, accessToken);
+    res.status(200).json(albumDetails);
+  } catch (error) {
+    console.error('Error fetching album details:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch album details',
       message: error.message,
       details: error.response ? error.response.data : null
     });

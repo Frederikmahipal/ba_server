@@ -1,10 +1,8 @@
-// server/services/spotifyService.js
-
 import axios from 'axios';
 
 const SPOTIFY_BASE_URL = 'https://api.spotify.com/v1';
 
-export const searchArtistsService = async (query, accessToken) => {
+export const searchSpotifyService = async (query, type, accessToken) => {
     try {
         const response = await axios.get(`${SPOTIFY_BASE_URL}/search`, {
             headers: {
@@ -12,17 +10,17 @@ export const searchArtistsService = async (query, accessToken) => {
             },
             params: {
                 q: query,
-                type: 'artist'
+                type: type
             }
         });
-        return response.data.artists.items;
+        return response.data;
     } catch (error) {
-        console.error('Error fetching artist search results:', error);
+        console.error(`Error fetching ${type} search results:`, error);
         throw error;
     }
 };
 
-// New service function to get artist details
+
 export const getArtistService = async (artistId, accessToken) => {
     try {
         const response = await axios.get(`${SPOTIFY_BASE_URL}/artists/${artistId}`, {
@@ -33,6 +31,40 @@ export const getArtistService = async (artistId, accessToken) => {
         return response.data; // Return artist details
     } catch (error) {
         console.error('Error fetching artist details:', error);
+        throw error;
+    }
+};
+
+// get albums for a specific artist
+export const getArtistAlbumsService = async (artistId, accessToken) => {
+    try {
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/artists/${artistId}/albums`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            },
+            params: {
+                include_groups: 'album,single', // Fetch both albums and singles
+                market: 'DK' 
+            }
+        });
+        return response.data.items; 
+    } catch (error) {
+        console.error('Error fetching artist albums:', error);
+        throw error;
+    }
+};
+
+// get specific album
+export const getAlbumService = async (albumId, accessToken) => {
+    try {
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/albums/${albumId}`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        return response.data; 
+    } catch (error) {
+        console.error('Error fetching album details:', error);
         throw error;
     }
 };

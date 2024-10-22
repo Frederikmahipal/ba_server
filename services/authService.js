@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import User from '../models/user.js'; // Adjust the import path as necessary
+import axios from 'axios';
 
 const generateAccessToken = (userId) => {
     if (!process.env.JWT_SECRET) {
@@ -23,10 +24,17 @@ export const signup = async (name, email, password) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = new User({ name, email, password: hashedPassword });
+    const newUser = new User({ 
+        name, 
+        email, 
+        password: hashedPassword,
+        spotifyId: null,
+        accessToken: null
+    });
     await newUser.save();
     return newUser;
 };
+
 
 export const login = async (email, password) => {
     const user = await User.findOne({ email });
@@ -66,4 +74,63 @@ export const checkAuth = async (token) => {
     } catch (error) {
         throw new Error('Invalid token');
     }
+};
+
+
+export const handleSpotifyLogin = async (accessToken) => {
+    try {
+        const userData = await fetchSpotifyUserData(accessToken);
+        let user = await User.findOne({ email: userData.email });
+
+        if (!user) {
+            user = new User({
+                name: userData.display_name,
+                email: userData.email,
+                spotifyId: userData.id,
+                accessToken: accessToken
+            });
+            
+            try {
+                await user.save();
+            } catch (saveError) {
+                console.error('Error saving new user:', saveError.message);
+                throw new Error('Failed to create new user');
+            }
+        } else {
+            if (!user.spotifyId) {
+                user.spotifyId = userData.id; // Link Spotify ID
+            }
+            user.accessToken = accessToken; // Update access token - needed in db ?
+            
+            try {
+                await user.save();
+            } catch (updateError) {
+                throw new Error('Failed to update existing user');
+            }
+        }
+        
+        // Generate a JWT token for the user
+        const token = generateAccessToken(user._id);
+
+        return { 
+            message: user ? 'Logged in successfully' : 'User created successfully', 
+            user: user,
+            accessToken: token,
+            spotifyAccessToken: accessToken
+        };
+        
+    } catch (error) {
+        console.error('Error handling Spotify login:', error.message);
+        console.error('Error stack trace:', error.stack);
+        throw new Error('Failed to handle Spotify login');
+    }
+};
+
+// Function to fetch Spotify user data
+const fetchSpotifyUserData = async (accessToken) => {
+    const response = await axios.get('https://api.spotify.com/v1/me', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    
+    return response.data;
 };

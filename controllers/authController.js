@@ -1,4 +1,5 @@
-import { signup, login, logout, checkAuth } from '../services/authService.js';
+import { signup, login, logout, checkAuth, handleSpotifyLogin } from '../services/authService.js';
+import { getAuthorizationUrl, getAccessToken } from '../config/spotifyAuth.js';
 import jwt from 'jsonwebtoken';
 
 export const signupController = async (req, res) => {
@@ -43,5 +44,51 @@ export const checkAuthController = async (req, res) => {
         res.status(200).json({ user });
     } catch (error) {
         res.status(401).json({ message: error.message });
+    }
+};
+
+export const spotifyLoginController = (req, res) => {
+    const authUrl = getAuthorizationUrl(); // Get the authorization URL
+    res.redirect(authUrl); // Redirect user to Spotify login
+};
+
+export const spotifyCallbackController = async (req, res) => {
+    const { code } = req.query;
+
+    if (!code) {
+        return res.status(400).json({ error: 'No code provided' });
+    }
+
+    try {
+        const accessToken = await getAccessToken(code);
+        console.log('Access token retrieved: ', accessToken);
+
+        const result = await handleSpotifyLogin(accessToken);
+        console.log('handleSpotifyLogin result:', result);
+
+        res.cookie('accessToken', result.accessToken, { 
+            httpOnly: true, 
+            secure: false, 
+            sameSite: 'Strict', 
+            path: '/', 
+            expires: new Date(Date.now() + 3600000) // 1 hour
+        });
+
+        // Set the Spotify access token in cookies
+        res.cookie('spotifyAccessToken', result.spotifyAccessToken, { 
+            httpOnly: true, 
+            secure: false, 
+            sameSite: 'Strict', 
+            path: '/'
+        });
+
+        // Redirect to the client application with tokens as query parameters
+        const redirectUrl = `http://localhost:5173/?accessToken=${result.accessToken}&spotifyAccessToken=${result.spotifyAccessToken}`;
+        res.redirect(redirectUrl);
+        
+    } catch (error) {
+        console.error('Error handling Spotify login:', error.message);
+        console.error('Error stack trace:', error.stack);
+        res.status(500).json({ error: 'Failed to handle Spotify login', details: error.message });
     }
 };
