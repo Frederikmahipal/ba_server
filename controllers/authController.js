@@ -82,8 +82,7 @@ export const spotifyCallbackController = async (req, res) => {
             path: '/'
         });
 
-        // Redirect to the client application with tokens as query parameters
-        const redirectUrl = `http://localhost:5173/?accessToken=${result.accessToken}&spotifyAccessToken=${result.spotifyAccessToken}`;
+        const redirectUrl = 'http://localhost:5173/';
         res.redirect(redirectUrl);
         
     } catch (error) {

@@ -5,7 +5,6 @@ const router = express.Router();
 
 router.post('/signup', signupController);
 router.post('/login', loginController);
-// router.post('/google-signin', googleSignInController);
 router.post('/logout', logoutController);
 router.get('/check-auth', checkAuthController); // New route for checking authentication
 
