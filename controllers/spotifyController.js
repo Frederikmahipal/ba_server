@@ -1,5 +1,14 @@
 import { getClientCredentialsToken } from '../config/spotifyAuth.js';
-import { searchSpotifyService, getArtistService, getArtistAlbumsService, getAlbumService, getUserPlaylistsService, getPlaylistDetailsService } from '../services/spotifyService.js';
+import { 
+  searchSpotifyService, 
+  getArtistService, 
+  getArtistAlbumsService, 
+  getAlbumService, 
+  getUserPlaylistsService, 
+  getPlaylistDetailsService, 
+  startPlaybackService,
+  activateDeviceService 
+} from '../services/spotifyService.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -148,5 +157,28 @@ export const getPlaylistDetails = async (req, res) => {
           message: error.message,
           details: error.response ? error.response.data : null
       });
+  }
+};
+
+export const startPlayback = async (req, res) => {
+  try {
+    const { deviceId, trackUri } = req.body;
+    const accessToken = req.headers.authorization?.split(' ')[1];
+
+    if (!accessToken) {
+      return res.status(401).json({ error: 'No access token provided' });
+    }
+
+    // Use service functions instead of direct axios calls
+    await activateDeviceService(deviceId, accessToken);
+    await startPlaybackService(deviceId, trackUri, accessToken);
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error starting playback:', error);
+    res.status(500).json({ 
+      error: 'Failed to start playback',
+      details: error.response?.data || error.message 
+    });
   }
 };

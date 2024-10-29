@@ -103,3 +103,46 @@ export const getPlaylistDetailsService = async (playlistId, accessToken) => {
 };
 
 
+//web player
+export const activateDeviceService = async (deviceId, accessToken) => {
+    try {
+      const response = await axios.put(
+        'https://api.spotify.com/v1/me/player',
+        {
+          device_ids: [deviceId],
+          play: false,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error activating device:', error);
+      throw error;
+    }
+  };
+  
+  export const startPlaybackService = async (deviceId, trackUri, accessToken) => {
+    try {
+      const response = await axios.put(
+        `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
+        {
+          uris: [trackUri]
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error starting playback:', error);
+      throw error;
+    }
+  };
