@@ -82,46 +82,41 @@ export const handleSpotifyLogin = async (accessToken) => {
         const userData = await fetchSpotifyUserData(accessToken);
         let user = await User.findOne({ email: userData.email });
 
+        // Get the web player token
+        const webPlayerResponse = await axios.get('https://open.spotify.com/get_access_token', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            }
+        });
+
         if (!user) {
             user = new User({
                 name: userData.display_name,
                 email: userData.email,
                 spotifyId: userData.id,
-                accessToken: accessToken
+                accessToken: accessToken,
+                webPlayerToken: webPlayerResponse.data.accessToken // Store web player token
             });
-            
-            try {
-                await user.save();
-            } catch (saveError) {
-                console.error('Error saving new user:', saveError.message);
-                throw new Error('Failed to create new user');
-            }
         } else {
-            if (!user.spotifyId) {
-                user.spotifyId = userData.id; // Link Spotify ID
-            }
-            user.accessToken = accessToken; // Update access token - needed in db ?
-            
-            try {
-                await user.save();
-            } catch (updateError) {
-                throw new Error('Failed to update existing user');
-            }
+            user.spotifyId = userData.id;
+            user.accessToken = accessToken;
+            user.webPlayerToken = webPlayerResponse.data.accessToken;
         }
         
-        // Generate a JWT token for the user
+        await user.save();
+        
         const token = generateAccessToken(user._id);
 
         return { 
-            message: user ? 'Logged in successfully' : 'User created successfully', 
+            message: 'Logged in successfully',
             user: user,
             accessToken: token,
-            spotifyAccessToken: accessToken
+            spotifyAccessToken: accessToken,
+            webPlayerToken: webPlayerResponse.data.accessToken
         };
         
     } catch (error) {
-        console.error('Error handling Spotify login:', error.message);
-        console.error('Error stack trace:', error.stack);
+        console.error('Error handling Spotify login:', error);
         throw new Error('Failed to handle Spotify login');
     }
 };

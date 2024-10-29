@@ -61,20 +61,18 @@ export const spotifyCallbackController = async (req, res) => {
 
     try {
         const accessToken = await getAccessToken(code);
-        console.log('Access token retrieved: ', accessToken);
-
         const result = await handleSpotifyLogin(accessToken);
-        console.log('handleSpotifyLogin result:', result);
 
+        // Set regular auth cookies
         res.cookie('accessToken', result.accessToken, { 
             httpOnly: true, 
             secure: false, 
             sameSite: 'Strict', 
             path: '/', 
-            expires: new Date(Date.now() + 3600000) // 1 hour
+            expires: new Date(Date.now() + 3600000)
         });
 
-        // Set the Spotify access token in cookies
+        // Set Spotify-specific cookies
         res.cookie('spotifyAccessToken', result.spotifyAccessToken, { 
             httpOnly: true, 
             secure: false, 
@@ -82,12 +80,15 @@ export const spotifyCallbackController = async (req, res) => {
             path: '/'
         });
 
+
         const redirectUrl = 'http://localhost:5173/';
         res.redirect(redirectUrl);
         
     } catch (error) {
-        console.error('Error handling Spotify login:', error.message);
-        console.error('Error stack trace:', error.stack);
-        res.status(500).json({ error: 'Failed to handle Spotify login', details: error.message });
+        console.error('Error handling Spotify login:', error);
+        res.status(500).json({ 
+            error: 'Failed to handle Spotify login', 
+            details: error.message 
+        });
     }
 };

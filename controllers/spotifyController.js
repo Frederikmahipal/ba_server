@@ -1,5 +1,5 @@
 import { getClientCredentialsToken } from '../config/spotifyAuth.js';
-import { searchSpotifyService, getArtistService, getArtistAlbumsService, getAlbumService } from '../services/spotifyService.js';
+import { searchSpotifyService, getArtistService, getArtistAlbumsService, getAlbumService, getUserPlaylistsService, getPlaylistDetailsService } from '../services/spotifyService.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -19,7 +19,6 @@ export const searchSpotify = async (req, res) => {
 
   try {
     const accessToken = await fetchAccessToken();
-    console.log('accessToken:', accessToken);
     
     if (!query) {
       res.status(200).json([]); // Return empty array if no query
@@ -101,5 +100,53 @@ export const getAlbum = async (req, res) => {
       message: error.message,
       details: error.response ? error.response.data : null
     });
+  }
+};
+
+
+
+export const getUserPlaylists = async (req, res) => {
+  try {
+      // For user playlists, we need the user's access token, not the client credentials token
+      const accessToken = req.headers.authorization?.split(' ')[1];
+      
+      if (!accessToken) {
+          return res.status(401).json({ error: 'No access token provided' });
+      }
+
+      const playlists = await getUserPlaylistsService(accessToken);
+      res.status(200).json(playlists);
+  } catch (error) {
+      console.error('Error fetching user playlists:', error);
+      res.status(500).json({ 
+          error: 'Failed to fetch user playlists',
+          message: error.message,
+          details: error.response ? error.response.data : null
+      });
+  }
+};
+
+export const getPlaylistDetails = async (req, res) => {
+  try {
+      const playlistId = req.params.id;
+      const accessToken = req.headers.authorization?.split(' ')[1];
+
+      if (!accessToken) {
+          return res.status(401).json({ error: 'No access token provided' });
+      }
+
+      if (!playlistId) {
+          return res.status(400).json({ error: 'Playlist ID is required' });
+      }
+
+      const playlistDetails = await getPlaylistDetailsService(playlistId, accessToken);
+      res.status(200).json(playlistDetails);
+  } catch (error) {
+      console.error('Error fetching playlist details:', error);
+      res.status(500).json({ 
+          error: 'Failed to fetch playlist details',
+          message: error.message,
+          details: error.response ? error.response.data : null
+      });
   }
 };

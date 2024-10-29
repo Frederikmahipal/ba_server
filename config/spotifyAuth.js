@@ -8,10 +8,9 @@ const clientSecret = process.env.SPOTIFY_CLIENT_SECRET; // Add your Client Secre
 const redirectUri = 'http://localhost:4000/auth/spotify/callback'; // Your redirect URI
 
 export const getAuthorizationUrl = () => {
-    const scope = 'user-read-private user-read-email playlist-modify-public playlist-modify-private';
+    const scope = 'user-read-private user-read-email playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative user-read-playback-state user-read-currently-playing';
     return `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
 };
-
 export const getAccessToken = async (code) => {
     const tokenUrl = 'https://accounts.spotify.com/api/token';
     const data = qs.stringify({
@@ -26,7 +25,6 @@ export const getAccessToken = async (code) => {
 
     try {
         const response = await axios.post(tokenUrl, data, { headers });
-        console.log('Access token response:', response.data);
         return response.data.access_token;
     } catch (error) {
         console.error('Error fetching access token:', error.response?.data || error.message);
@@ -46,7 +44,6 @@ export const getClientCredentialsToken = async () => {
 
     try {
         const response = await axios.post(tokenUrl, data, { headers });
-        console.log('Client Credentials token response:', response.data);
         return response.data.access_token;
     } catch (error) {
         console.error('Error fetching Client Credentials token:', error.response?.data || error.message);

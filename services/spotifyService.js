@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 const SPOTIFY_BASE_URL = 'https://api.spotify.com/v1';
 
 export const searchSpotifyService = async (query, type, accessToken) => {
@@ -68,3 +69,37 @@ export const getAlbumService = async (albumId, accessToken) => {
         throw error;
     }
 };
+
+
+export const getUserPlaylistsService = async (accessToken) => {
+    try {
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/me/playlists`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            },
+            params: {
+                limit: 50 
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching user playlists:', error);
+        throw error;
+    }
+};
+
+export const getPlaylistDetailsService = async (playlistId, accessToken) => {
+    try {
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/playlists/${playlistId}`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching playlist details:', error);
+        throw error;
+    }
+};
+
+
