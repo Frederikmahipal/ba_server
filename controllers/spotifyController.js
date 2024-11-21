@@ -7,7 +7,9 @@ import {
   getUserPlaylistsService, 
   getPlaylistDetailsService, 
   startPlaybackService,
-  activateDeviceService 
+  activateDeviceService,
+  getCategoriesService,
+  getCategoryPlaylistsService
 } from '../services/spotifyService.js';
 import dotenv from 'dotenv';
 
@@ -179,6 +181,40 @@ export const startPlayback = async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to start playback',
       details: error.response?.data || error.message 
+    });
+  }
+};
+
+export const getCategories = async (req, res) => {
+  try {
+    const accesstoken = await fetchAccessToken();
+
+    const categories = await getCategoriesService(accesstoken);
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories', message: error.message });
+  }
+}
+
+export const getCategoryPlaylists = async (req, res) => {
+  try {
+    const categoryId = req.params.id;
+    const accessToken = await fetchAccessToken();
+
+    if (!categoryId) {
+      res.status(400).json({ error: 'Category ID is required' });
+      return;
+    }
+
+    const playlists = await getCategoryPlaylistsService(categoryId, accessToken);
+    res.status(200).json(playlists);
+  } catch (error) {
+    console.error('Error fetching category playlists:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch category playlists',
+      message: error.message,
+      details: error.response ? error.response.data : null
     });
   }
 };

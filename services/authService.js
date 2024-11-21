@@ -89,17 +89,20 @@ export const handleSpotifyLogin = async (accessToken) => {
             }
         });
 
+        const profilePicture = userData.images && userData.images.length > 0 ? userData.images[0].url : null;
         if (!user) {
             user = new User({
                 name: userData.display_name,
                 email: userData.email,
                 spotifyId: userData.id,
                 accessToken: accessToken,
+                profilePicture: profilePicture,
                 webPlayerToken: webPlayerResponse.data.accessToken // Store web player token
             });
         } else {
             user.spotifyId = userData.id;
             user.accessToken = accessToken;
+            user.profilePicture = profilePicture;
             user.webPlayerToken = webPlayerResponse.data.accessToken;
         }
         

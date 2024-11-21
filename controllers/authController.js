@@ -1,6 +1,5 @@
 import { signup, login, logout, checkAuth, handleSpotifyLogin } from '../services/authService.js';
 import { getAuthorizationUrl, getAccessToken } from '../config/spotifyAuth.js';
-import jwt from 'jsonwebtoken';
 
 export const signupController = async (req, res) => {
     try {
