@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-
 const SPOTIFY_BASE_URL = 'https://api.spotify.com/v1';
 
 export const searchSpotifyService = async (query, type, accessToken) => {
@@ -29,14 +28,30 @@ export const getArtistService = async (artistId, accessToken) => {
                 Authorization: `Bearer ${accessToken}`
             }
         });
-        return response.data; // Return artist details
+        return response.data; //
     } catch (error) {
         console.error('Error fetching artist details:', error);
         throw error;
     }
 };
 
-// get albums for a specific artist
+export const getArtistTopTracksService = async (artistId, accessToken) => {
+    try {
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/artists/${artistId}/top-tracks`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            },
+            params: {
+                market: 'DK' 
+            }
+        });
+        return response.data.tracks; 
+    } catch (error) {
+        console.error('Error fetching artist top tracks:', error);
+        throw error;
+    }
+};
+
 export const getArtistAlbumsService = async (artistId, accessToken) => {
     try {
         const response = await axios.get(`${SPOTIFY_BASE_URL}/artists/${artistId}/albums`, {
@@ -44,7 +59,7 @@ export const getArtistAlbumsService = async (artistId, accessToken) => {
                 Authorization: `Bearer ${accessToken}`
             },
             params: {
-                include_groups: 'album,single', // Fetch both albums and singles
+                include_groups: 'album,single',
                 market: 'DK'
             }
         });
@@ -55,7 +70,7 @@ export const getArtistAlbumsService = async (artistId, accessToken) => {
     }
 };
 
-// get specific album
+
 export const getAlbumService = async (albumId, accessToken) => {
     try {
         const response = await axios.get(`${SPOTIFY_BASE_URL}/albums/${albumId}`, {
@@ -69,7 +84,6 @@ export const getAlbumService = async (albumId, accessToken) => {
         throw error;
     }
 };
-
 
 export const getUserPlaylistsService = async (accessToken) => {
     try {
@@ -102,6 +116,19 @@ export const getPlaylistDetailsService = async (playlistId, accessToken) => {
     }
 };
 
+export const getRecentlyPlayedService = async (accessToken) => {
+    try {
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/me/player/recently-played`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching recently played:', error);
+        throw error;
+    }
+}
 
 //web player
 export const activateDeviceService = async (deviceId, accessToken) => {
@@ -147,39 +174,40 @@ export const startPlaybackService = async (deviceId, trackUri, accessToken) => {
     }
 };
 
-export const getCategoriesService = async (accessToken) => {
+export const getCurrentlyPlayingService = async (accessToken) => {
     try {
-        const response = await axios.get(`${SPOTIFY_BASE_URL}/browse/categories`, {
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/me/player/currently-playing`, {
             headers: {
                 Authorization: `Bearer ${accessToken}`
-            },
-            params: {
-                country: 'DA', // Specify the country if needed
-                limit: 50 // Adjust the limit as needed
             }
         });
-        return response.data.categories.items;
+        return response.data; 
     } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error('Error fetching currently playing:', error);
         throw error;
     }
-};
+}
 
-export const getCategoryPlaylistsService = async (categoryId, accessToken) => {
+export const addToRecentlyPlayedService = async (accessToken, trackUri) => {
     try {
-        const response = await axios.get(`${SPOTIFY_BASE_URL}/browse/categories/${categoryId}/playlists`, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
+        const response = await axios.put(
+            `${SPOTIFY_BASE_URL}/me/player/play`,
+            {
+                uris: [trackUri],
+                position_ms: 0
             },
-            params: {
-                country: 'DA',
-                limit: 50
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
             }
-        });
-        return response.data.playlists.items;
+        );
+        return response.data;
     } catch (error) {
-        console.error('Error fetching category playlists:', error);
+        console.error('Error adding to recently played:', error);
         throw error;
     }
-};
+}
+
+
 

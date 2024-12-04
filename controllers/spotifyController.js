@@ -8,13 +8,15 @@ import {
   getPlaylistDetailsService, 
   startPlaybackService,
   activateDeviceService,
-  getCategoriesService,
-  getCategoryPlaylistsService
+  getArtistTopTracksService,
+  getRecentlyPlayedService,
+  getCurrentlyPlayingService
 } from '../services/spotifyService.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+//client access token
 export const fetchAccessToken = async () => {
   try {
     return await getClientCredentialsToken();
@@ -69,6 +71,23 @@ export const getArtist = async (req, res) => {
     });
   }
 };
+
+export const getArtistTopTracks = async (req, res) => {
+  try {
+    const artistId = req.params.id;
+    const accessToken = await fetchAccessToken();
+
+    if (!artistId) {
+      res.status(400).json({ error: 'Artist ID is required' });
+      return;
+    }
+
+    const topTracks = await getArtistTopTracksService(artistId, accessToken);
+    res.status(200).json(topTracks);
+  } catch (error) {
+    console.error('Error fetching artist top tracks:', error);
+  }
+}
 
 export const getArtistAlbums = async (req, res) => {
   try {
@@ -162,6 +181,25 @@ export const getPlaylistDetails = async (req, res) => {
   }
 };
 
+export const getRecentlyPlayed = async (req, res) => {
+  try {
+    const accessToken = req.headers.authorization?.split(' ')[1];
+
+    if (!accessToken) {
+      return res.status(401).json({ error: 'No access token provided' });
+    }
+
+    const recentlyPlayed = await getRecentlyPlayedService(accessToken);
+    res.status(200).json(recentlyPlayed);
+  } catch (error) {
+    console.error('Error fetching recently played:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch recently played',
+      details: error.response?.data || error.message 
+    });
+  }
+}
+
 export const startPlayback = async (req, res) => {
   try {
     const { deviceId, trackUri } = req.body;
@@ -185,36 +223,25 @@ export const startPlayback = async (req, res) => {
   }
 };
 
-export const getCategories = async (req, res) => {
+export const getCurrentlyPlaying = async (req, res) => {
   try {
-    const accesstoken = await fetchAccessToken();
+      const accessToken = req.headers.authorization?.split(' ')[1];
+      
+      if (!accessToken) {
+          return res.status(401).json({ error: 'No access token provided' });
+      }
 
-    const categories = await getCategoriesService(accesstoken);
-    res.status(200).json(categories);
+      const currentTrack = await getCurrentlyPlayingService(accessToken);
+      res.status(200).json(currentTrack);
   } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).json({ error: 'Failed to fetch categories', message: error.message });
-  }
-}
-
-export const getCategoryPlaylists = async (req, res) => {
-  try {
-    const categoryId = req.params.id;
-    const accessToken = await fetchAccessToken();
-
-    if (!categoryId) {
-      res.status(400).json({ error: 'Category ID is required' });
-      return;
-    }
-
-    const playlists = await getCategoryPlaylistsService(categoryId, accessToken);
-    res.status(200).json(playlists);
-  } catch (error) {
-    console.error('Error fetching category playlists:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch category playlists',
-      message: error.message,
-      details: error.response ? error.response.data : null
-    });
+      console.error('Error fetching currently playing track:', error);
+      // If no track is playing, return null instead of an error
+      if (error.response?.status === 204) {
+          return res.status(200).json(null);
+      }
+      res.status(500).json({ 
+          error: 'Failed to fetch currently playing track',
+          details: error.response?.data || error.message 
+      });
   }
 };
