@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import User from '../models/user.js'; // Adjust the import path as necessary
+import axios from 'axios';
 
 const generateAccessToken = (userId) => {
     if (!process.env.JWT_SECRET) {
@@ -23,10 +24,17 @@ export const signup = async (name, email, password) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = new User({ name, email, password: hashedPassword });
+    const newUser = new User({ 
+        name, 
+        email, 
+        password: hashedPassword,
+        spotifyId: null,
+        accessToken: null
+    });
     await newUser.save();
     return newUser;
 };
+
 
 export const login = async (email, password) => {
     const user = await User.findOne({ email });
@@ -66,4 +74,61 @@ export const checkAuth = async (token) => {
     } catch (error) {
         throw new Error('Invalid token');
     }
+};
+
+
+export const handleSpotifyLogin = async (accessToken) => {
+    try {
+        const userData = await fetchSpotifyUserData(accessToken);
+        let user = await User.findOne({ email: userData.email });
+
+        // Get the web player token
+        const webPlayerResponse = await axios.get('https://open.spotify.com/get_access_token', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            }
+        });
+
+        const profilePicture = userData.images && userData.images.length > 0 ? userData.images[0].url : null;
+        if (!user) {
+            user = new User({
+                name: userData.display_name,
+                email: userData.email,
+                spotifyId: userData.id,
+                accessToken: accessToken,
+                profilePicture: profilePicture,
+                webPlayerToken: webPlayerResponse.data.accessToken // Store web player token
+            });
+        } else {
+            user.spotifyId = userData.id;
+            user.accessToken = accessToken;
+            user.profilePicture = profilePicture;
+            user.webPlayerToken = webPlayerResponse.data.accessToken;
+        }
+        
+        await user.save();
+        
+        const token = generateAccessToken(user._id);
+
+        return { 
+            message: 'Logged in successfully',
+            user: user,
+            accessToken: token,
+            spotifyAccessToken: accessToken,
+            webPlayerToken: webPlayerResponse.data.accessToken
+        };
+        
+    } catch (error) {
+        console.error('Error handling Spotify login:', error);
+        throw new Error('Failed to handle Spotify login');
+    }
+};
+
+// Function to fetch Spotify user data
+const fetchSpotifyUserData = async (accessToken) => {
+    const response = await axios.get('https://api.spotify.com/v1/me', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    
+    return response.data;
 };

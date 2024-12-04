@@ -1,5 +1,5 @@
-import { signup, login, logout, checkAuth } from '../services/authService.js';
-import jwt from 'jsonwebtoken';
+import { signup, login, logout, checkAuth, handleSpotifyLogin } from '../services/authService.js';
+import { getAuthorizationUrl, getAccessToken } from '../config/spotifyAuth.js';
 
 export const signupController = async (req, res) => {
     try {
@@ -43,5 +43,51 @@ export const checkAuthController = async (req, res) => {
         res.status(200).json({ user });
     } catch (error) {
         res.status(401).json({ message: error.message });
+    }
+};
+
+export const spotifyLoginController = (req, res) => {
+    const authUrl = getAuthorizationUrl(); // Get the authorization URL
+    res.redirect(authUrl); // Redirect user to Spotify login
+};
+
+export const spotifyCallbackController = async (req, res) => {
+    const { code } = req.query;
+
+    if (!code) {
+        return res.status(400).json({ error: 'No code provided' });
+    }
+
+    try {
+        const accessToken = await getAccessToken(code);
+        const result = await handleSpotifyLogin(accessToken);
+
+        // Set regular auth cookies
+        res.cookie('accessToken', result.accessToken, { 
+            httpOnly: true, 
+            secure: false, 
+            sameSite: 'Strict', 
+            path: '/', 
+            expires: new Date(Date.now() + 3600000)
+        });
+
+        // Set Spotify-specific cookies
+        res.cookie('spotifyAccessToken', result.spotifyAccessToken, { 
+            httpOnly: true, 
+            secure: false, 
+            sameSite: 'Strict', 
+            path: '/'
+        });
+
+
+        const redirectUrl = 'http://localhost:5173/';
+        res.redirect(redirectUrl);
+        
+    } catch (error) {
+        console.error('Error handling Spotify login:', error);
+        res.status(500).json({ 
+            error: 'Failed to handle Spotify login', 
+            details: error.message 
+        });
     }
 };
