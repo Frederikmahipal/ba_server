@@ -9,7 +9,10 @@ import {
     startPlayback,
     getArtistTopTracks,
     getRecentlyPlayed,
-    getCurrentlyPlaying
+    getCurrentlyPlaying,
+    getQueue,
+    skipToNext,
+    skipToPrevious
 } from '../controllers/spotifyController.js';
 
 const router = express.Router();
@@ -24,5 +27,8 @@ router.put('/player/play', startPlayback);
 router.get('/artist/:id/top-tracks', getArtistTopTracks);
 router.get('/recently-played', getRecentlyPlayed);
 router.get('/currently-playing', getCurrentlyPlaying);
+router.get('/player/queue', getQueue);
+router.post('/player/next', skipToNext);
+router.post('/player/previous', skipToPrevious);
 
 export default router;

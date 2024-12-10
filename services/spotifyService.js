@@ -153,13 +153,12 @@ export const activateDeviceService = async (deviceId, accessToken) => {
     }
 };
 
-export const startPlaybackService = async (deviceId, trackUri, accessToken) => {
+export const startPlaybackService = async (deviceId, playbackData, accessToken) => {
     try {
+        
         const response = await axios.put(
-            `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
-            {
-                uris: [trackUri]
-            },
+            `${SPOTIFY_BASE_URL}/me/player/play?device_id=${deviceId}`,
+            playbackData,  // contains context_uri or uris, and offset if needed
             {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -169,7 +168,7 @@ export const startPlaybackService = async (deviceId, trackUri, accessToken) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error starting playback:', error);
+        console.error('Error starting playback:', error.response?.data || error);
         throw error;
     }
 };
@@ -209,5 +208,71 @@ export const addToRecentlyPlayedService = async (accessToken, trackUri) => {
     }
 }
 
+export const getQueueService = async (accessToken) => {
+    try {
+        // Add a small delay to ensure Spotify's API has updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const response = await axios.get(`${SPOTIFY_BASE_URL}/me/player/queue`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        
+        // If no queue data, return an empty structure
+        if (!response.data) {
+            return {
+                currently_playing: null,
+                queue: []
+            };
+        }
+        
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching queue:', error);
+        // Return empty queue on error
+        return {
+            currently_playing: null,
+            queue: []
+        };
+    }
+}
 
+export const skipToNextService = async (accessToken) => {
+    try {
+        const response = await axios.post(
+            `${SPOTIFY_BASE_URL}/me/player/next`,
+            {},  // empty body
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error skipping to next track:', error);
+        throw error;
+    }
+};
+
+export const skipToPreviousService = async (accessToken) => {
+    try {
+        const response = await axios.post(
+            `${SPOTIFY_BASE_URL}/me/player/previous`,
+            {},  // empty body
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error skipping to previous track:', error);
+        throw error;
+    }
+};
 

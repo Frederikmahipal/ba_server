@@ -10,7 +10,10 @@ import {
   activateDeviceService,
   getArtistTopTracksService,
   getRecentlyPlayedService,
-  getCurrentlyPlayingService
+  getCurrentlyPlayingService,
+  getQueueService,
+  skipToNextService,
+  skipToPreviousService
 } from '../services/spotifyService.js';
 import dotenv from 'dotenv';
 
@@ -202,24 +205,49 @@ export const getRecentlyPlayed = async (req, res) => {
 
 export const startPlayback = async (req, res) => {
   try {
-    const { deviceId, trackUri } = req.body;
-    const accessToken = req.headers.authorization?.split(' ')[1];
+      const { deviceId, context_uri, uris, offset, position_ms = 0 } = req.body;
+      const accessToken = req.headers.authorization?.split(' ')[1];
 
-    if (!accessToken) {
-      return res.status(401).json({ error: 'No access token provided' });
-    }
+      if (!accessToken) {
+          return res.status(401).json({ error: 'No access token provided' });
+      }
 
-    // Use service functions instead of direct axios calls
-    await activateDeviceService(deviceId, accessToken);
-    await startPlaybackService(deviceId, trackUri, accessToken);
+      // Construct the playback request body based on what was provided
+      let playbackData = {};
+      
+      if (context_uri) {
+          // Playing from an album, artist, or playlist
+          playbackData = {
+              context_uri,
+              offset: offset || { position: 0 },
+              position_ms
+          };
+      } else if (uris) {
+          // Playing individual tracks
+          playbackData = {
+              uris: Array.isArray(uris) ? uris : [uris],
+              position_ms
+          };
+      } else {
+          return res.status(400).json({ 
+              error: 'Invalid playback request',
+              message: 'Either context_uri or uris must be provided'
+          });
+      }
 
-    res.status(200).json({ success: true });
+      // First activate the device
+      await activateDeviceService(deviceId, accessToken);
+      
+      // Then start playback
+      await startPlaybackService(deviceId, playbackData, accessToken);
+
+      res.status(200).json({ success: true });
   } catch (error) {
-    console.error('Error starting playback:', error);
-    res.status(500).json({ 
-      error: 'Failed to start playback',
-      details: error.response?.data || error.message 
-    });
+      console.error('Error starting playback:', error.response?.data || error);
+      res.status(500).json({ 
+          error: 'Failed to start playback',
+          details: error.response?.data || error.message 
+      });
   }
 };
 
@@ -244,4 +272,68 @@ export const getCurrentlyPlaying = async (req, res) => {
           details: error.response?.data || error.message 
       });
   }
+};
+
+export const getQueue = async (req, res) => {
+  try {
+      const accessToken = req.headers.authorization?.split(' ')[1];
+      
+      if (!accessToken) {
+          return res.status(401).json({ error: 'No access token provided' });
+      }
+
+      const queue = await getQueueService(accessToken);
+      res.status(200).json(queue);
+  } catch (error) {
+      console.error('Error fetching queue:', error);
+      // If no queue is available, return empty queue instead of error
+      if (error.response?.status === 204) {
+          return res.status(200).json({ 
+              currently_playing: null,
+              queue: [] 
+          });
+      }
+      res.status(500).json({ 
+          error: 'Failed to fetch queue',
+          details: error.response?.data || error.message 
+      });
+  }
+};
+
+export const skipToNext = async (req, res) => {
+    try {
+        const accessToken = req.headers.authorization?.split(' ')[1];
+        
+        if (!accessToken) {
+            return res.status(401).json({ error: 'No access token provided' });
+        }
+
+        await skipToNextService(accessToken);
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error skipping to next track:', error);
+        res.status(500).json({ 
+            error: 'Failed to skip to next track',
+            details: error.response?.data || error.message 
+        });
+    }
+};
+
+export const skipToPrevious = async (req, res) => {
+    try {
+        const accessToken = req.headers.authorization?.split(' ')[1];
+        
+        if (!accessToken) {
+            return res.status(401).json({ error: 'No access token provided' });
+        }
+
+        await skipToPreviousService(accessToken);
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error skipping to previous track:', error);
+        res.status(500).json({ 
+            error: 'Failed to skip to previous track',
+            details: error.response?.data || error.message 
+        });
+    }
 };
