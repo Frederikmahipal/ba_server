@@ -51,3 +51,85 @@ export const getOtherUserProfileService = async (userId) => {
     throw error;
   }
 };
+
+export const followUser = async (userId, userToFollowId) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user.followedUsers.includes(userToFollowId)) {
+            user.followedUsers.push(userToFollowId);
+            await user.save();
+        }
+        return user;
+    } catch (error) {
+        throw new Error('Failed to follow user');
+    }
+};
+
+export const unfollowUser = async (userId, userToUnfollowId) => {
+    try {
+        const user = await User.findById(userId);
+        user.followedUsers = user.followedUsers.filter(id => id.toString() !== userToUnfollowId);
+        await user.save();
+        return user;
+    } catch (error) {
+        throw new Error('Failed to unfollow user');
+    }
+};
+
+export const followArtist = async (userId, artistData) => {
+    try {
+        const user = await User.findById(userId);
+        const isAlreadyFollowing = user.followedArtists.some(
+            artist => artist.spotifyArtistId === artistData.id
+        );
+
+        if (!isAlreadyFollowing) {
+            user.followedArtists.push({
+                spotifyArtistId: artistData.id,
+                name: artistData.name,
+                imageUrl: artistData.images?.[0]?.url || '',
+                followedAt: new Date()
+            });
+            await user.save();
+        }
+        return user;
+    } catch (error) {
+        console.error('Error in followArtist service:', error);
+        throw new Error('Failed to follow artist');
+    }
+};
+
+export const unfollowArtist = async (userId, artistId) => {
+    try {
+        const user = await User.findById(userId);
+        user.followedArtists = user.followedArtists.filter(
+            artist => artist.spotifyArtistId !== artistId
+        );
+        await user.save();
+        return user;
+    } catch (error) {
+        throw new Error('Failed to unfollow artist');
+    }
+};
+
+export const getFeed = async (userId) => {
+    try {
+        const user = await User.findById(userId)
+            .populate('followedUsers', 'name profilePicture');
+
+        // Get followed users' recent activity
+        // This is where you'd implement your activity tracking
+        // For now, we'll return a basic structure
+
+        const feed = {
+            followedUsers: user.followedUsers,
+            followedArtists: user.followedArtists,
+            // You can add more feed items here later
+        };
+
+        return feed;
+    } catch (error) {
+        throw new Error('Failed to get feed');
+    }
+};
+

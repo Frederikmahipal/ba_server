@@ -1,5 +1,6 @@
-import { getProfileService, updateProfileService, searchUsersService, getOtherUserProfileService } from '../services/userService.js';
-
+import * as userService from '../services/userService.js';
+import { getArtistService } from '../services/spotifyService.js';
+import User from '../models/user.js'
 // Controller to get user profile
 export const getProfile = async (req, res) => {
   try {
@@ -43,5 +44,86 @@ export const getOtherUserProfile = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Error fetching user profile', error });
   }
+};
+
+export const followUser = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { userToFollowId } = req.body;
+        const updatedUser = await userService.followUser(userId, userToFollowId);
+        res.json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const unfollowUser = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { userToUnfollowId } = req.body;
+        const updatedUser = await userService.unfollowUser(userId, userToUnfollowId);
+        res.json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const followArtist = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { artistId } = req.body;
+        
+        // Get the access token from the user in the database
+        const user = await User.findById(userId);
+        if (!user || !user.accessToken) {
+            throw new Error('User not found or no access token available');
+        }
+
+        // Get artist details from Spotify using the user's access token
+        const response = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+            headers: {
+                'Authorization': `Bearer ${user.accessToken}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch artist data from Spotify');
+        }
+
+        const artistData = await response.json();
+        
+        // Then save to our database
+        const updatedUser = await userService.followArtist(userId, {
+            id: artistData.id,
+            name: artistData.name,
+            images: artistData.images
+        });
+
+        res.json(updatedUser);
+    } catch (error) {
+        console.error('Error following artist:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const unfollowArtist = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { artistId } = req.body;
+        const updatedUser = await userService.unfollowArtist(userId, artistId);
+        res.json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getFeed = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const feed = await userService.getFeed(userId);
+        res.json(feed);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 

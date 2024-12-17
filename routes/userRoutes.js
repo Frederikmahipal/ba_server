@@ -1,19 +1,22 @@
 import express from 'express';
-import { getProfile, updateProfile, searchUsers, getOtherUserProfile } from '../controllers/userController.js';
-import authenticateUser from '../middleware/authMiddleware.js';
+import { 
+    followUser, 
+    unfollowUser, 
+    followArtist, 
+    unfollowArtist,
+    getFeed 
+} from '../controllers/userController.js';
+import { authenticateUser } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Route to get user profile
-router.get('/profile', authenticateUser, getProfile);
+// All routes should be protected
+router.use(authenticateUser);
 
-// Route to update user profile
-router.put('/profile', authenticateUser, updateProfile);
-
-// Route to search users
-router.get('/search', authenticateUser, searchUsers);
-
-// Route to get another user's profile
-router.get('/profile/:id', authenticateUser, getOtherUserProfile);
+router.post('/follow/user', followUser);
+router.post('/unfollow/user', unfollowUser);
+router.post('/follow/artist', followArtist);
+router.post('/unfollow/artist', unfollowArtist);
+router.get('/feed', getFeed);
 
 export default router;

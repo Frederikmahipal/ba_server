@@ -13,8 +13,15 @@ import {
   getCurrentlyPlayingService,
   getQueueService,
   skipToNextService,
-  skipToPreviousService
+  skipToPreviousService,
+  getRecentlyPlayedArtistsService,
+  getTopArtistsService,
+  getArtistGenresService,
+  getArtistDetailsService,
+  getRelatedArtistsService,
+  addToRecentlyPlayedService
 } from '../services/spotifyService.js';
+import User from '../models/user.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -333,6 +340,104 @@ export const skipToPrevious = async (req, res) => {
         console.error('Error skipping to previous track:', error);
         res.status(500).json({ 
             error: 'Failed to skip to previous track',
+            details: error.response?.data || error.message 
+        });
+    }
+};
+
+export const getRelatedArtists = async (req, res) => {
+    try {
+        const artistId = req.params.id;
+        const relatedArtists = await getRelatedArtistsService(artistId, req.user.accessToken);
+        res.json(relatedArtists);
+    } catch (error) {
+        console.error('Error getting related artists:', error);
+        res.status(500).json({ error: 'Failed to get related artists' });
+    }
+};
+
+export const getRecommendedArtists = async (req, res) => {
+    try {
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ error: 'User not authenticated' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user || !user.accessToken) {
+            return res.status(401).json({ error: 'No access token found' });
+        }
+
+        // 1. Get artists from both sources
+        const [recentArtists, topArtists] = await Promise.all([
+            getRecentlyPlayedArtistsService(user.accessToken),
+            getTopArtistsService(user.accessToken)
+        ]);
+
+        // 2. Combine and filter out followed artists
+        const artistsMap = new Map();
+        [...recentArtists, ...topArtists].forEach(artist => {
+            if (!artistsMap.has(artist.id) && 
+                !user.followedArtists.some(a => a.spotifyArtistId === artist.id)) {
+                artistsMap.set(artist.id, artist);
+            }
+        });
+
+        // 3. Get genres from followed artists
+        const followedGenres = new Set();
+        await Promise.all(
+            user.followedArtists
+                .slice(0, 5)
+                .map(async (artist) => {
+                    const genres = await getArtistGenresService(
+                        artist.spotifyArtistId, 
+                        user.accessToken
+                    );
+                    genres.forEach(genre => followedGenres.add(genre));
+                })
+        );
+
+        // 4. Get full details and sort
+        const artistDetailsPromises = Array.from(artistsMap.keys())
+            .map(artistId => getArtistDetailsService(artistId, user.accessToken));
+
+        const artistDetails = (await Promise.all(artistDetailsPromises))
+            .filter(artist => artist !== null)
+            .sort((a, b) => {
+                const aGenreMatch = a.genres?.some(genre => followedGenres.has(genre)) ? 1 : 0;
+                const bGenreMatch = b.genres?.some(genre => followedGenres.has(genre)) ? 1 : 0;
+                if (aGenreMatch !== bGenreMatch) return bGenreMatch - aGenreMatch;
+                return b.popularity - a.popularity;
+            })
+            .slice(0, 20);
+
+        res.json(artistDetails);
+    } catch (error) {
+        console.error('Error getting recommended artists:', error);
+        res.status(500).json({ 
+            error: 'Failed to get recommendations', 
+            details: error.message 
+        });
+    }
+};
+
+export const addToRecentlyPlayed = async (req, res) => {
+    try {
+        const { track, context } = req.body;
+        const accessToken = req.headers.authorization?.split(' ')[1];
+
+        if (!accessToken) {
+            return res.status(401).json({ error: 'No access token provided' });
+        }
+
+        await addToRecentlyPlayedService(accessToken, track);
+        
+        // Fetch updated recently played list
+        const recentlyPlayed = await getRecentlyPlayedService(accessToken);
+        res.status(200).json(recentlyPlayed);
+    } catch (error) {
+        console.error('Error adding to recently played:', error);
+        res.status(500).json({ 
+            error: 'Failed to add to recently played',
             details: error.response?.data || error.message 
         });
     }

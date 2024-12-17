@@ -1,4 +1,5 @@
 import express from 'express';
+import { authenticateUser } from '../middleware/authMiddleware.js';
 import { 
     getArtist, 
     searchSpotify, 
@@ -12,7 +13,10 @@ import {
     getCurrentlyPlaying,
     getQueue,
     skipToNext,
-    skipToPrevious
+    skipToPrevious,
+    getRelatedArtists,
+    getRecommendedArtists,
+    addToRecentlyPlayed
 } from '../controllers/spotifyController.js';
 
 const router = express.Router();
@@ -30,5 +34,8 @@ router.get('/currently-playing', getCurrentlyPlaying);
 router.get('/player/queue', getQueue);
 router.post('/player/next', skipToNext);
 router.post('/player/previous', skipToPrevious);
+router.get('/artists/:id/related', authenticateUser, getRelatedArtists);
+router.get('/recommendations/artists', authenticateUser, getRecommendedArtists);
+router.post('/recently-played/add', authenticateUser, addToRecentlyPlayed);
 
 export default router;

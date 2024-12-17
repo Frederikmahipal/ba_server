@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 
-const authenticateUser = async (req, res, next) => {
+export const authenticateUser = async (req, res, next) => {
   const token = req.cookies.accessToken; // Get token from cookies
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
