@@ -23,6 +23,8 @@ import {
 } from '../services/spotifyService.js';
 import User from '../models/user.js';
 import dotenv from 'dotenv';
+import { cacheService } from '../services/cacheService.js';
+import { wait } from '../utils/helpers.js';
 
 dotenv.config();
 
@@ -63,21 +65,28 @@ export const searchSpotify = async (req, res) => {
 export const getArtist = async (req, res) => {
   try {
     const artistId = req.params.id;
-    const accessToken = await fetchAccessToken();
-
-    if (!artistId) {
-      res.status(400).json({ error: 'Artist ID is required' });
-      return;
+    const cacheKey = `artist:${artistId}`;
+    
+    // Check cache first
+    const cachedData = cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.status(200).json(cachedData);
     }
 
-    const artistDetails = await getArtistService(artistId, accessToken);
+    const accessToken = await fetchAccessToken();
+    const artistDetails = await retryWithBackoff(async () => {
+      return await getArtistService(artistId, accessToken);
+    });
+
+    // Cache the result
+    cacheService.set(cacheKey, artistDetails);
     res.status(200).json(artistDetails);
   } catch (error) {
     console.error('Error fetching artist details:', error);
-    res.status(500).json({ 
+    res.status(error.response?.status || 500).json({ 
       error: 'Failed to fetch artist details',
       message: error.message,
-      details: error.response ? error.response.data : null
+      details: error.response?.data || null
     });
   }
 };
@@ -357,67 +366,78 @@ export const getRelatedArtists = async (req, res) => {
 };
 
 export const getRecommendedArtists = async (req, res) => {
-    try {
-        if (!req.user || !req.user.id) {
-            return res.status(401).json({ error: 'User not authenticated' });
-        }
-
-        const user = await User.findById(req.user.id);
-        if (!user || !user.accessToken) {
-            return res.status(401).json({ error: 'No access token found' });
-        }
-
-        // 1. Get artists from both sources
-        const [recentArtists, topArtists] = await Promise.all([
-            getRecentlyPlayedArtistsService(user.accessToken),
-            getTopArtistsService(user.accessToken)
-        ]);
-
-        // 2. Combine and filter out followed artists
-        const artistsMap = new Map();
-        [...recentArtists, ...topArtists].forEach(artist => {
-            if (!artistsMap.has(artist.id) && 
-                !user.followedArtists.some(a => a.spotifyArtistId === artist.id)) {
-                artistsMap.set(artist.id, artist);
-            }
-        });
-
-        // 3. Get genres from followed artists
-        const followedGenres = new Set();
-        await Promise.all(
-            user.followedArtists
-                .slice(0, 5)
-                .map(async (artist) => {
-                    const genres = await getArtistGenresService(
-                        artist.spotifyArtistId, 
-                        user.accessToken
-                    );
-                    genres.forEach(genre => followedGenres.add(genre));
-                })
-        );
-
-        // 4. Get full details and sort
-        const artistDetailsPromises = Array.from(artistsMap.keys())
-            .map(artistId => getArtistDetailsService(artistId, user.accessToken));
-
-        const artistDetails = (await Promise.all(artistDetailsPromises))
-            .filter(artist => artist !== null)
-            .sort((a, b) => {
-                const aGenreMatch = a.genres?.some(genre => followedGenres.has(genre)) ? 1 : 0;
-                const bGenreMatch = b.genres?.some(genre => followedGenres.has(genre)) ? 1 : 0;
-                if (aGenreMatch !== bGenreMatch) return bGenreMatch - aGenreMatch;
-                return b.popularity - a.popularity;
-            })
-            .slice(0, 20);
-
-        res.json(artistDetails);
-    } catch (error) {
-        console.error('Error getting recommended artists:', error);
-        res.status(500).json({ 
-            error: 'Failed to get recommendations', 
-            details: error.message 
-        });
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
+
+    const cacheKey = `recommendations:${req.user.id}`;
+    const cachedRecommendations = cacheService.get(cacheKey);
+    if (cachedRecommendations) {
+      return res.status(200).json(cachedRecommendations);
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user || !user.accessToken) {
+      return res.status(401).json({ error: 'No access token found' });
+    }
+
+    // Limit the number of concurrent requests
+    const recentArtists = await retryWithBackoff(() => 
+      getRecentlyPlayedArtistsService(user.accessToken)
+    );
+
+    const topArtists = await retryWithBackoff(() => 
+      getTopArtistsService(user.accessToken)
+    );
+
+    // 2. Combine and filter out followed artists
+    const artistsMap = new Map();
+    [...recentArtists, ...topArtists].forEach(artist => {
+      if (!artistsMap.has(artist.id) && 
+        !user.followedArtists.some(a => a.spotifyArtistId === artist.id)) {
+        artistsMap.set(artist.id, artist);
+      }
+    });
+
+    // 3. Get genres from followed artists
+    const followedGenres = new Set();
+    await Promise.all(
+      user.followedArtists
+        .slice(0, 5)
+        .map(async (artist) => {
+          const genres = await getArtistGenresService(
+            artist.spotifyArtistId, 
+            user.accessToken
+          );
+          genres.forEach(genre => followedGenres.add(genre));
+        })
+    );
+
+    // 4. Get full details and sort
+    const artistDetailsPromises = Array.from(artistsMap.keys())
+      .map(artistId => getArtistDetailsService(artistId, user.accessToken));
+
+    const artistDetails = (await Promise.all(artistDetailsPromises))
+      .filter(artist => artist !== null)
+      .sort((a, b) => {
+        const aGenreMatch = a.genres?.some(genre => followedGenres.has(genre)) ? 1 : 0;
+        const bGenreMatch = b.genres?.some(genre => followedGenres.has(genre)) ? 1 : 0;
+        if (aGenreMatch !== bGenreMatch) return bGenreMatch - aGenreMatch;
+        return b.popularity - a.popularity;
+      })
+      .slice(0, 20);
+
+    // Cache results for 1 hour
+    cacheService.set(cacheKey, artistDetails);
+    res.json(artistDetails);
+  } catch (error) {
+    console.error('Error getting recommended artists:', error);
+    res.status(500).json({ 
+      error: 'Failed to get recommendations', 
+      details: error.message 
+    });
+  }
 };
 
 export const addToRecentlyPlayed = async (req, res) => {
@@ -441,4 +461,79 @@ export const addToRecentlyPlayed = async (req, res) => {
             details: error.response?.data || error.message 
         });
     }
+};
+
+const retryWithBackoff = async (fn, retries = 3, backoff = 1000) => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error.response?.status === 429 && retries > 0) {
+      const retryAfter = parseInt(error.response.headers['retry-after']) || backoff;
+      await wait(retryAfter);
+      return retryWithBackoff(fn, retries - 1, backoff * 2);
+    }
+    throw error;
+  }
+};
+
+export const getArtistUpdates = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const accessToken = await fetchAccessToken();
+    
+    // Check cache first
+    const cacheKey = `artistUpdates:${req.user.id}`;
+    const cachedData = cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+    
+    // Get all followed artists
+    const followedArtists = user.followedArtists;
+    
+    const updates = await Promise.all(
+      followedArtists.slice(0, 10).map(async (artist) => { // Limit to 10 artists to avoid rate limits
+        const [albums, topTracks] = await Promise.all([
+          // Get latest albums/singles
+          getArtistAlbumsService(artist.spotifyArtistId, accessToken),
+          // Get current top tracks
+          getArtistTopTracksService(artist.spotifyArtistId, accessToken)
+        ]);
+
+        // Filter albums/singles from the last 6 months
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        
+        const recentReleases = albums
+          .filter(release => new Date(release.release_date) >= sixMonthsAgo)
+          .slice(0, 3);
+
+        return {
+          artistId: artist.spotifyArtistId,
+          artistName: artist.name,
+          artistImage: artist.imageUrl,
+          updates: {
+            newReleases: recentReleases,
+            topTracks: topTracks.slice(0, 3) // Only get top 3 tracks
+          }
+        };
+      })
+    );
+
+    // Filter out artists with no updates
+    const filteredUpdates = updates.filter(
+      update => update.updates.newReleases.length > 0 || update.updates.topTracks.length > 0
+    );
+
+    // Cache the results
+    cacheService.set(cacheKey, filteredUpdates, 3600); // Cache for 1 hour
+    
+    res.json(filteredUpdates);
+  } catch (error) {
+    console.error('Error fetching artist updates:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch artist updates',
+      details: error.message 
+    });
+  }
 };
