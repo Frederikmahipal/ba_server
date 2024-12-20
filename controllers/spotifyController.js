@@ -61,7 +61,7 @@ export const searchSpotify = async (req, res) => {
     });
   }
 };
-// New function to get artist details
+
 export const getArtist = async (req, res) => {
   try {
     const artistId = req.params.id;
@@ -74,9 +74,7 @@ export const getArtist = async (req, res) => {
     }
 
     const accessToken = await fetchAccessToken();
-    const artistDetails = await retryWithBackoff(async () => {
-      return await getArtistService(artistId, accessToken);
-    });
+    const artistDetails = await getArtistService(artistId, accessToken);
 
     // Cache the result
     cacheService.set(cacheKey, artistDetails);
@@ -382,14 +380,8 @@ export const getRecommendedArtists = async (req, res) => {
       return res.status(401).json({ error: 'No access token found' });
     }
 
-    // Limit the number of concurrent requests
-    const recentArtists = await retryWithBackoff(() => 
-      getRecentlyPlayedArtistsService(user.accessToken)
-    );
-
-    const topArtists = await retryWithBackoff(() => 
-      getTopArtistsService(user.accessToken)
-    );
+    const recentArtists = await getRecentlyPlayedArtistsService(user.accessToken);
+    const topArtists = await getTopArtistsService(user.accessToken);
 
     // 2. Combine and filter out followed artists
     const artistsMap = new Map();
@@ -463,19 +455,6 @@ export const addToRecentlyPlayed = async (req, res) => {
     }
 };
 
-const retryWithBackoff = async (fn, retries = 3, backoff = 1000) => {
-  try {
-    return await fn();
-  } catch (error) {
-    if (error.response?.status === 429 && retries > 0) {
-      const retryAfter = parseInt(error.response.headers['retry-after']) || backoff;
-      await wait(retryAfter);
-      return retryWithBackoff(fn, retries - 1, backoff * 2);
-    }
-    throw error;
-  }
-};
-
 export const getArtistUpdates = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -533,7 +512,6 @@ export const getArtistUpdates = async (req, res) => {
     console.error('Error fetching artist updates:', error);
     res.status(500).json({ 
       error: 'Failed to fetch artist updates',
-      details: error.message 
     });
   }
 };
