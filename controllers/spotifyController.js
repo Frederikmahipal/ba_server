@@ -19,7 +19,8 @@ import {
   getArtistGenresService,
   getArtistDetailsService,
   getRelatedArtistsService,
-  addToRecentlyPlayedService
+  addToRecentlyPlayedService,
+  addTracksToPlaylistService
 } from '../services/spotifyService.js';
 import User from '../models/user.js';
 import dotenv from 'dotenv';
@@ -512,6 +513,47 @@ export const getArtistUpdates = async (req, res) => {
     console.error('Error fetching artist updates:', error);
     res.status(500).json({ 
       error: 'Failed to fetch artist updates',
+    });
+  }
+};
+
+export const addTracksToPlaylist = async (req, res) => {
+  try {
+    // Log incoming request
+    console.log('Add tracks request:', {
+      params: req.params,
+      body: req.body,
+      playlistId: req.params.id
+    });
+
+    const { id: playlistId } = req.params;
+    const { tracks } = req.body;
+
+    if (!playlistId) {
+      console.error('Missing playlist ID in request');
+      return res.status(400).json({ 
+        error: 'Playlist ID is required'
+      });
+    }
+
+    if (!tracks || !tracks.length) {
+      return res.status(400).json({ 
+        error: 'No tracks provided'
+      });
+    }
+
+    const response = await addTracksToPlaylistService(
+      playlistId,
+      tracks,
+      req.user.accessToken
+    );
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error adding tracks to playlist:', error);
+    res.status(500).json({ 
+      error: 'Failed to add tracks to playlist',
+      details: error.message 
     });
   }
 };

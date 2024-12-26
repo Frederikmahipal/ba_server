@@ -374,3 +374,28 @@ export const getRelatedArtistsService = async (artistId, accessToken) => {
     }
 };
 
+export const addTracksToPlaylistService = async (playlistId, tracks, accessToken) => {
+  try {
+    if (!playlistId) {
+      throw new Error('Playlist ID is required');
+    }
+    if (!tracks || !tracks.length) {
+      throw new Error('No tracks provided');
+    }
+
+    const response = await axios.post(
+      `${SPOTIFY_BASE_URL}/playlists/${playlistId}/tracks`,
+      { uris: tracks },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error in addTracksToPlaylistService:', error);
+    throw error;
+  }
+};

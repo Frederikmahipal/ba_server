@@ -4,11 +4,32 @@ import User from '../models/user.js'
 // Controller to get user profile
 export const getProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const userProfile = await getProfileService(userId);
+    // req.user is set by authenticateUser middleware
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Return user data without sensitive information
+    const userProfile = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      spotifyId: user.spotifyId,
+      createdAt: user.createdAt,
+      profilePicture: user.profilePicture
+    };
+
+    console.log('Sending user profile:', userProfile); // Debug log
     res.status(200).json(userProfile);
+    
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching user profile', error });
+    console.error('Error in getProfile:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch user profile',
+      details: error.message 
+    });
   }
 };
 

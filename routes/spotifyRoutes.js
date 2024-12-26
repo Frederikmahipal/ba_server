@@ -18,7 +18,8 @@ import {
     getRelatedArtists,
     getRecommendedArtists,
     addToRecentlyPlayed,
-    getArtistUpdates
+    getArtistUpdates,
+    addTracksToPlaylist
 } from '../controllers/spotifyController.js';
 
 const router = express.Router();
@@ -42,5 +43,6 @@ router.get('/artists/:id/related', authenticateUser, getRelatedArtists);
 router.get('/recommendations/artists', authenticateUser, getRecommendedArtists);
 router.post('/recently-played/add', authenticateUser, addToRecentlyPlayed);
 router.get('/artist-updates', authenticateUser, getArtistUpdates);
+router.post('/playlists/:id/tracks', authenticateUser, addTracksToPlaylist);
 
 export default router;
