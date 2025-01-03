@@ -1,17 +1,22 @@
 import * as userService from '../services/userService.js';
 import { getArtistService } from '../services/spotifyService.js';
 import User from '../models/user.js'
-// Controller to get user profile
+import { cacheService } from '../services/cacheService.js';
+
+const invalidateUserCaches = (userId) => {
+    cacheService.del(`artistUpdates:${userId}`);
+    cacheService.del(`playlists:user:${userId}`);
+    cacheService.del(`recommendations:${userId}`);
+};
+
 export const getProfile = async (req, res) => {
   try {
-    // req.user is set by authenticateUser middleware
     const user = req.user;
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Return user data without sensitive information
     const userProfile = {
       id: user._id,
       name: user.name,
@@ -21,7 +26,6 @@ export const getProfile = async (req, res) => {
       profilePicture: user.profilePicture
     };
 
-    console.log('Sending user profile:', userProfile); // Debug log
     res.status(200).json(userProfile);
     
   } catch (error) {
@@ -33,7 +37,6 @@ export const getProfile = async (req, res) => {
   }
 };
 
-// Controller to update user profile
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id; 
@@ -44,7 +47,6 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// Controller to search users
 export const searchUsers = async (req, res) => {
   try {
     const query = req.query.q; 
@@ -56,7 +58,6 @@ export const searchUsers = async (req, res) => {
   }
 };
 
-// Controller to get another user's profile
 export const getOtherUserProfile = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -94,7 +95,6 @@ export const followArtist = async (req, res) => {
         const userId = req.user.id;
         const { artistId } = req.body;
         
-        // Get the access token from the user in the database
         const user = await User.findById(userId);
         if (!user || !user.accessToken) {
             throw new Error('User not found or no access token available');
@@ -113,12 +113,14 @@ export const followArtist = async (req, res) => {
 
         const artistData = await response.json();
         
-        // Then save to our database
         const updatedUser = await userService.followArtist(userId, {
             id: artistData.id,
             name: artistData.name,
             images: artistData.images
         });
+
+        // Invalidate caches after successful follow
+        invalidateUserCaches(userId);
 
         res.json(updatedUser);
     } catch (error) {
@@ -132,6 +134,10 @@ export const unfollowArtist = async (req, res) => {
         const userId = req.user.id;
         const { artistId } = req.body;
         const updatedUser = await userService.unfollowArtist(userId, artistId);
+
+        // Invalidate caches after successful unfollow
+        invalidateUserCaches(userId);
+
         res.json(updatedUser);
     } catch (error) {
         res.status(500).json({ error: error.message });

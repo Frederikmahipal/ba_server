@@ -104,14 +104,45 @@ export const getUserPlaylistsService = async (accessToken) => {
 
 export const getPlaylistDetailsService = async (playlistId, accessToken) => {
     try {
-        const response = await axios.get(`${SPOTIFY_BASE_URL}/playlists/${playlistId}`, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
+        // Get initial playlist data
+        const response = await axios.get(
+            `${SPOTIFY_BASE_URL}/playlists/${playlistId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                },
+                params: {
+                    limit: 50
+                }
             }
-        });
-        return response.data;
+        );
+
+        const initialData = response.data;
+        let allTracks = [...initialData.tracks.items];
+        let nextUrl = initialData.tracks.next;
+
+        // Fetch all remaining tracks
+        while (nextUrl) {
+            const moreTracksResponse = await axios.get(nextUrl, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            });
+
+            allTracks = [...allTracks, ...moreTracksResponse.data.items];
+            nextUrl = moreTracksResponse.data.next;
+        }
+
+        // Return complete playlist with all tracks
+        return {
+            ...initialData,
+            tracks: {
+                ...initialData.tracks,
+                items: allTracks
+            }
+        };
     } catch (error) {
-        console.error('Error fetching playlist details:', error);
+        console.error('Error in getPlaylistDetailsService:', error);
         throw error;
     }
 };

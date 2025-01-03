@@ -25,7 +25,6 @@ import {
 import User from '../models/user.js';
 import dotenv from 'dotenv';
 import { cacheService } from '../services/cacheService.js';
-import { wait } from '../utils/helpers.js';
 
 dotenv.config();
 
@@ -134,19 +133,23 @@ export const getAlbum = async (req, res) => {
     const albumId = req.params.id;
     const accessToken = await getClientCredentialsToken();
 
-    if (!albumId) {
-      res.status(400).json({ error: 'Album ID is required' });
-      return;
+    // Check cache first
+    const cacheKey = `album:${albumId}`;
+    const cachedData = cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
     }
 
     const albumDetails = await getAlbumService(albumId, accessToken);
+    
+    // Cache for 1 hour since album data rarely changes
+    cacheService.set(cacheKey, albumDetails, 3600);
     res.status(200).json(albumDetails);
   } catch (error) {
     console.error('Error fetching album details:', error);
     res.status(500).json({ 
       error: 'Failed to fetch album details',
-      message: error.message,
-      details: error.response ? error.response.data : null
+      message: error.message
     });
   }
 };
@@ -155,47 +158,69 @@ export const getAlbum = async (req, res) => {
 
 export const getUserPlaylists = async (req, res) => {
   try {
-      // For user playlists, we need the user's access token, not the client credentials token
-      const accessToken = req.headers.authorization?.split(' ')[1];
-      
-      if (!accessToken) {
-          return res.status(401).json({ error: 'No access token provided' });
-      }
+    const accessToken = req.headers.authorization?.split(' ')[1];
+    
+    if (!accessToken) {
+      return res.status(401).json({ error: 'No access token provided' });
+    }
 
-      const playlists = await getUserPlaylistsService(accessToken);
-      res.status(200).json(playlists);
+    // Extract user ID from the token or use a fallback
+    let cacheKey = 'playlists:global';
+    if (req.user?.id) {
+      cacheKey = `playlists:user:${req.user.id}`;
+    }
+
+    // Check cache first
+    const cachedData = cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
+    const playlists = await getUserPlaylistsService(accessToken);
+    
+    // Cache for 5 minutes
+    cacheService.set(cacheKey, playlists, 300);
+    res.status(200).json(playlists);
   } catch (error) {
-      console.error('Error fetching user playlists:', error);
-      res.status(500).json({ 
-          error: 'Failed to fetch user playlists',
-          message: error.message,
-          details: error.response ? error.response.data : null
-      });
+    console.error('Error fetching user playlists:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch user playlists',
+      message: error.message
+    });
   }
 };
 
 export const getPlaylistDetails = async (req, res) => {
   try {
-      const playlistId = req.params.id;
-      const accessToken = req.headers.authorization?.split(' ')[1];
+    const { id: playlistId } = req.params;
+    const accessToken = req.headers.authorization?.split(' ')[1];
 
-      if (!accessToken) {
-          return res.status(401).json({ error: 'No access token provided' });
-      }
+    if (!accessToken) {
+      return res.status(401).json({ error: 'No access token provided' });
+    }
 
-      if (!playlistId) {
-          return res.status(400).json({ error: 'Playlist ID is required' });
-      }
+    if (!playlistId) {
+      return res.status(400).json({ error: 'Playlist ID is required' });
+    }
 
-      const playlistDetails = await getPlaylistDetailsService(playlistId, accessToken);
-      res.status(200).json(playlistDetails);
+    // Create cache key without depending on req.user
+    const cacheKey = `playlist:${playlistId}`;
+    const cachedData = cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
+    const playlistDetails = await getPlaylistDetailsService(playlistId, accessToken);
+    
+    // Cache for 5 minutes since playlist contents can change
+    cacheService.set(cacheKey, playlistDetails, 300);
+    res.json(playlistDetails);
   } catch (error) {
-      console.error('Error fetching playlist details:', error);
-      res.status(500).json({ 
-          error: 'Failed to fetch playlist details',
-          message: error.message,
-          details: error.response ? error.response.data : null
-      });
+    console.error('Error fetching playlist details:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch playlist details',
+      message: error.message 
+    });
   }
 };
 
@@ -468,45 +493,41 @@ export const getArtistUpdates = async (req, res) => {
       return res.json(cachedData);
     }
     
-    // Get all followed artists
     const followedArtists = user.followedArtists;
     
     const updates = await Promise.all(
-      followedArtists.slice(0, 10).map(async (artist) => { // Limit to 10 artists to avoid rate limits
-        const [albums, topTracks] = await Promise.all([
-          // Get latest albums/singles
-          getArtistAlbumsService(artist.spotifyArtistId, accessToken),
-          // Get current top tracks
-          getArtistTopTracksService(artist.spotifyArtistId, accessToken)
-        ]);
+      followedArtists.map(async (artist) => {
+        // Only get albums/singles, no need for top tracks anymore
+        const albums = await getArtistAlbumsService(artist.spotifyArtistId, accessToken);
 
-        // Filter albums/singles from the last 6 months
+        // Filter for releases from the last 6 months
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         
         const recentReleases = albums
           .filter(release => new Date(release.release_date) >= sixMonthsAgo)
-          .slice(0, 3);
+          .slice(0, 3);  // Keep only the 3 most recent releases
 
-        return {
-          artistId: artist.spotifyArtistId,
-          artistName: artist.name,
-          artistImage: artist.imageUrl,
-          updates: {
-            newReleases: recentReleases,
-            topTracks: topTracks.slice(0, 3) // Only get top 3 tracks
-          }
-        };
+        // Only return artists that have recent releases
+        if (recentReleases.length > 0) {
+          return {
+            artistId: artist.spotifyArtistId,
+            artistName: artist.name,
+            artistImage: artist.imageUrl,
+            updates: {
+              newReleases: recentReleases
+            }
+          };
+        }
+        return null;
       })
     );
 
-    // Filter out artists with no updates
-    const filteredUpdates = updates.filter(
-      update => update.updates.newReleases.length > 0 || update.updates.topTracks.length > 0
-    );
+    // Filter out null values (artists with no updates)
+    const filteredUpdates = updates.filter(update => update !== null);
 
-    // Cache the results
-    cacheService.set(cacheKey, filteredUpdates, 3600); // Cache for 1 hour
+    // Cache the results for 1 hour
+    cacheService.set(cacheKey, filteredUpdates, 3600);
     
     res.json(filteredUpdates);
   } catch (error) {
@@ -519,12 +540,6 @@ export const getArtistUpdates = async (req, res) => {
 
 export const addTracksToPlaylist = async (req, res) => {
   try {
-    // Log incoming request
-    console.log('Add tracks request:', {
-      params: req.params,
-      body: req.body,
-      playlistId: req.params.id
-    });
 
     const { id: playlistId } = req.params;
     const { tracks } = req.body;
