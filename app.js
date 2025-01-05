@@ -16,7 +16,7 @@ const port = 4000;
 connectDB();
 
 const corsOptions = {
-    origin: ['http://localhost:5173', 'https://ba-server.vercel.app'],
+    origin: ['http://localhost:5173', 'https://client-sepia-xi-77.vercel.app'],
     credentials: true, 
 };
 
