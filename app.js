@@ -7,7 +7,6 @@ import spotifyRoutes from './routes/spotifyRoutes.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { spotifyApiLimiter } from './middleware/rateLimiter.js';
-import session from 'express-session';
 
 dotenv.config();
 
@@ -33,18 +32,6 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    proxy: true, // Required for Vercel
-    cookie: {
-        secure: true,
-        sameSite: 'none',
-        maxAge: 24 * 60 * 60 * 1000,
-        domain: '.vercel.app' // Match your domain
-    }
-}));
 
 app.use('/auth', authRoutes);
 app.use('/api/users', userRoutes); 
