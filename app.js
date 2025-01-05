@@ -16,31 +16,39 @@ const port = 4000;
 
 connectDB();
 
+// Important for Vercel
+app.set('trust proxy', 1);
+
 const corsOptions = {
     origin: [
-        'https://client-sepia-xi-77.vercel.app',                                          // Production URL
-        'https://client-7xd81ltpe-frederiks-projects-6d4123e7.vercel.app',               // Deployment URL
-        'http://localhost:5173'                                                           // Local development
+        'https://client-sepia-xi-77.vercel.app',
+        'https://client-7xd81ltpe-frederiks-projects-6d4123e7.vercel.app',
+        'http://localhost:5173'
     ],
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['set-cookie']
 };
+
+// Enable pre-flight requests for all routes
+app.options('*', cors(corsOptions));
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Just add trust proxy
-app.set('trust proxy', 1);
-
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    proxy: true, // Required for Vercel
     cookie: {
         secure: true,
         sameSite: 'none',
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000,
+        domain: '.vercel.app' // Match your domain
     }
 }));
 
