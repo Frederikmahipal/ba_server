@@ -25,7 +25,7 @@ import {
 import User from '../models/user.js';
 import dotenv from 'dotenv';
 import { cacheService } from '../services/cacheService.js';
-
+import { invalidatePlaylistCache } from '../services/cacheService.js';
 dotenv.config();
 
 //client access token
@@ -195,31 +195,58 @@ export const getPlaylistDetails = async (req, res) => {
     const { id: playlistId } = req.params;
     const accessToken = req.headers.authorization?.split(' ')[1];
 
-    if (!accessToken) {
-      return res.status(401).json({ error: 'No access token provided' });
-    }
-
     if (!playlistId) {
-      return res.status(400).json({ error: 'Playlist ID is required' });
+      return res.status(400).json({ 
+        error: 'Playlist ID is required'
+      });
     }
 
-    // Create cache key without depending on req.user
+    if (!accessToken) {
+      return res.status(401).json({
+        error: 'No access token provided'
+      });
+    }
+
+    // Check cache first
     const cacheKey = `playlist:${playlistId}`;
     const cachedData = cacheService.get(cacheKey);
     if (cachedData) {
       return res.json(cachedData);
     }
 
-    const playlistDetails = await getPlaylistDetailsService(playlistId, accessToken);
-    
-    // Cache for 5 minutes since playlist contents can change
-    cacheService.set(cacheKey, playlistDetails, 300);
-    res.json(playlistDetails);
+    try {
+      const playlistDetails = await getPlaylistDetailsService(playlistId, accessToken);
+      
+      // Cache for 5 minutes since playlist contents can change
+      cacheService.set(cacheKey, playlistDetails, 300);
+      
+      res.json(playlistDetails);
+    } catch (spotifyError) {
+      console.error('Spotify API Error:', spotifyError.response?.data || spotifyError);
+      
+      // Handle specific Spotify API errors
+      if (spotifyError.response?.status === 401) {
+        return res.status(401).json({
+          error: 'Spotify access token expired',
+          message: 'Please refresh your session'
+        });
+      }
+      
+      if (spotifyError.response?.status === 404) {
+        return res.status(404).json({
+          error: 'Playlist not found',
+          message: 'The requested playlist does not exist'
+        });
+      }
+
+      throw spotifyError;
+    }
   } catch (error) {
-    console.error('Error fetching playlist details:', error);
+    console.error('Error in getPlaylistDetails:', error);
     res.status(500).json({ 
       error: 'Failed to fetch playlist details',
-      message: error.message 
+      message: error.message,
+      details: error.response?.data || null
     });
   }
 };
@@ -391,9 +418,7 @@ export const getRelatedArtists = async (req, res) => {
 
 export const getRecommendedArtists = async (req, res) => {
   try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
+
 
     const cacheKey = `recommendations:${req.user.id}`;
     const cachedRecommendations = cacheService.get(cacheKey);
@@ -540,9 +565,9 @@ export const getArtistUpdates = async (req, res) => {
 
 export const addTracksToPlaylist = async (req, res) => {
   try {
-
     const { id: playlistId } = req.params;
     const { tracks } = req.body;
+    const accessToken = req.headers.authorization?.split(' ')[1];
 
     if (!playlistId) {
       console.error('Missing playlist ID in request');
@@ -557,17 +582,40 @@ export const addTracksToPlaylist = async (req, res) => {
       });
     }
 
-    const response = await addTracksToPlaylistService(
-      playlistId,
-      tracks,
-      req.user.accessToken
-    );
-
+    const response = await addTracksToPlaylistService(playlistId, tracks, accessToken);
+    
+    // Invalidate the cache for this playlist
+    invalidatePlaylistCache(playlistId);
+    
     res.json(response);
   } catch (error) {
     console.error('Error adding tracks to playlist:', error);
     res.status(500).json({ 
       error: 'Failed to add tracks to playlist',
+      details: error.message 
+    });
+  }
+};
+
+export const activateDevice = async (req, res) => {
+  try {
+    const { deviceId } = req.body;
+    const accessToken = req.headers.authorization?.split(' ')[1];
+
+    if (!accessToken) {
+      return res.status(401).json({ error: 'No access token provided' });
+    }
+
+    if (!deviceId) {
+      return res.status(400).json({ error: 'Device ID is required' });
+    }
+
+    await activateDeviceService(deviceId, accessToken);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error activating device:', error);
+    res.status(500).json({ 
+      error: 'Failed to activate device',
       details: error.message 
     });
   }

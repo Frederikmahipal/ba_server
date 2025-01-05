@@ -1,13 +1,7 @@
 import * as userService from '../services/userService.js';
 import { getArtistService } from '../services/spotifyService.js';
 import User from '../models/user.js'
-import { cacheService } from '../services/cacheService.js';
-
-const invalidateUserCaches = (userId) => {
-    cacheService.del(`artistUpdates:${userId}`);
-    cacheService.del(`playlists:user:${userId}`);
-    cacheService.del(`recommendations:${userId}`);
-};
+import { cacheService, invalidateUserCaches } from '../services/cacheService.js';
 
 export const getProfile = async (req, res) => {
   try {
