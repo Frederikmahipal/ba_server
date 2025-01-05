@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 
-const authenticateUser = async (req, res, next) => {
-  const token = req.cookies.accessToken; // Get token from cookies
+export const authenticateUser = async (req, res, next) => {
+  const token = req.cookies.accessToken; 
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
   }
@@ -16,7 +16,7 @@ const authenticateUser = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('Token verification error:', error); // Log the error for debugging
+    console.error('Token verification error:', error); 
     res.status(401).json({ message: 'Invalid token' });
   }
 };

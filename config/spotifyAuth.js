@@ -28,6 +28,7 @@ export const getAuthorizationUrl = () => {
     return `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
 };
 
+//User level
 export const getAccessToken = async (code) => {
     const tokenUrl = 'https://accounts.spotify.com/api/token';
     const data = qs.stringify({
@@ -49,6 +50,7 @@ export const getAccessToken = async (code) => {
     }
 };
 
+//application level
 export const getClientCredentialsToken = async () => {
     const tokenUrl = 'https://accounts.spotify.com/api/token';
     const data = qs.stringify({

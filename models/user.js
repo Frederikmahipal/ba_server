@@ -22,7 +22,20 @@ const userSchema = new mongoose.Schema({
     },
     profilePicture: {
         type: String
-    }
+    },
+    followedUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    followedArtists: [{
+        spotifyArtistId: String,
+        name: String,
+        imageUrl: String,
+        followedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, {
     timestamps: true
 });
