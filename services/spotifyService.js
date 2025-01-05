@@ -430,3 +430,26 @@ export const addTracksToPlaylistService = async (playlistId, tracks, accessToken
     throw error;
   }
 };
+
+export const createPlaylistService = async (userId, name, accessToken) => {
+    try {
+        const response = await axios.post(
+            `${SPOTIFY_BASE_URL}/users/${userId}/playlists`,
+            {
+                name,
+                public: false, // Create private playlists by default
+                description: 'Created with Spotify Clone'
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error creating playlist:', error);
+        throw error;
+    }
+};

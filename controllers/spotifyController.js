@@ -20,12 +20,14 @@ import {
   getArtistDetailsService,
   getRelatedArtistsService,
   addToRecentlyPlayedService,
-  addTracksToPlaylistService
+  addTracksToPlaylistService,
+  createPlaylistService
 } from '../services/spotifyService.js';
 import User from '../models/user.js';
 import dotenv from 'dotenv';
 import { cacheService } from '../services/cacheService.js';
 import { invalidatePlaylistCache } from '../services/cacheService.js';
+import axios from 'axios';
 dotenv.config();
 
 //client access token
@@ -619,4 +621,46 @@ export const activateDevice = async (req, res) => {
       details: error.message 
     });
   }
+};
+
+export const createPlaylist = async (req, res) => {
+    try {
+        const { name } = req.body;
+        const accessToken = req.headers.authorization?.split(' ')[1];
+        
+        if (!accessToken) {
+            return res.status(401).json({ error: 'No access token provided' });
+        }
+
+        if (!name) {
+            return res.status(400).json({ error: 'Playlist name is required' });
+        }
+
+        // Get user ID from Spotify
+        const userResponse = await axios.get('https://api.spotify.com/v1/me', {
+            headers: { 
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const userId = userResponse.data.id;
+        const playlist = await createPlaylistService(userId, name, accessToken);
+        
+        // Invalidate all playlist-related caches
+        cacheService.del('playlists:global');
+        cacheService.del(`playlists:user:${userId}`);
+        
+        // Return the newly created playlist along with a flag
+        res.status(201).json({
+            playlist,
+            isNew: true
+        });
+    } catch (error) {
+        console.error('Error creating playlist:', error);
+        res.status(500).json({ 
+            error: 'Failed to create playlist',
+            details: error.response?.data || error.message 
+        });
+    }
 };

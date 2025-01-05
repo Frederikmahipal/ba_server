@@ -20,7 +20,8 @@ import {
     addToRecentlyPlayed,
     getArtistUpdates,
     addTracksToPlaylist,
-    activateDevice
+    activateDevice,
+    createPlaylist
 } from '../controllers/spotifyController.js';
 
 const router = express.Router();
@@ -46,5 +47,6 @@ router.post('/recently-played/add', authenticateUser, addToRecentlyPlayed);
 router.get('/artist-updates', authenticateUser, getArtistUpdates);
 router.post('/playlists/:id/tracks', authenticateUser, addTracksToPlaylist);
 router.put('/player/activate-device', authenticateUser, activateDevice);
+router.post('/playlists', authenticateUser, createPlaylist);
 
 export default router;
