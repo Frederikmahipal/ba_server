@@ -20,7 +20,7 @@ const corsOptions = {
     origin: ['http://localhost:5173', 'https://client-sepia-xi-77.vercel.app'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
@@ -28,20 +28,17 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Set trust proxy for Vercel deployment
+// Just add trust proxy
 app.set('trust proxy', 1);
 
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Required for Vercel
     cookie: {
-        secure: true, // Always use secure in production
-        sameSite: 'none', // Required for cross-site cookies
-        maxAge: 24 * 60 * 60 * 1000,
-        httpOnly: true,
-        domain: '.vercel.app' // Match your domain
+        secure: true,
+        sameSite: 'none',
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 

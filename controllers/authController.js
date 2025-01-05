@@ -57,17 +57,14 @@ export const spotifyCallbackController = async (req, res) => {
     try {
         const { code } = req.query;
         if (!code) {
-            console.error('No code received from Spotify');
             return res.redirect('https://client-sepia-xi-77.vercel.app/auth?error=no_code');
         }
 
         const accessToken = await getAccessToken(code);
         if (!accessToken) {
-            console.error('Failed to get access token');
             return res.redirect('https://client-sepia-xi-77.vercel.app/auth?error=no_token');
         }
 
-        // Get user profile from Spotify
         const spotifyUser = await getSpotifyUserProfile(accessToken);
         
         let user = await User.findOne({ spotifyId: spotifyUser.id });
@@ -83,21 +80,14 @@ export const spotifyCallbackController = async (req, res) => {
         }
         await user.save();
 
-        // Set cookies with production-safe settings
+        // Simple cookie setting
         res.cookie('accessToken', accessToken, { 
             httpOnly: true, 
-            secure: true,  // Always true for production
-            sameSite: 'none',  // Required for cross-site cookies
-            path: '/', 
-            expires: new Date(Date.now() + 3600000) // 1 hour
+            secure: true,
+            sameSite: 'none',
+            path: '/'
         });
 
-        // Set session cookie with same settings
-        req.session.cookie.secure = true;
-        req.session.cookie.sameSite = 'none';
-        req.session.userId = user._id;
-
-        // Redirect to frontend
         res.redirect('https://client-sepia-xi-77.vercel.app');
     } catch (error) {
         console.error('Spotify callback error:', error);
