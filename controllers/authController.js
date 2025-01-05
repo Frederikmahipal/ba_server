@@ -80,7 +80,7 @@ export const spotifyCallbackController = async (req, res) => {
         });
 
 
-        const redirectUrl = 'http://localhost:5173/';
+        const redirectUrl = 'https://client-sepia-xi-77.vercel.app';
         res.redirect(redirectUrl);
         
     } catch (error) {

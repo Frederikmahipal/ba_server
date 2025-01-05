@@ -3,9 +3,9 @@ import qs from 'qs';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const clientId = process.env.SPOTIFY_CLIENT_ID; // Add your Client ID
-const clientSecret = process.env.SPOTIFY_CLIENT_SECRET; // Add your Client Secret
-const redirectUri = 'https://ba-server.vercel.app/auth/spotify/callback'; // Your redirect URI
+const clientId = process.env.SPOTIFY_CLIENT_ID; 
+const clientSecret = process.env.SPOTIFY_CLIENT_SECRET; 
+const redirectUri = 'https://ba-server.vercel.app/auth/spotify/callback'; 
 
 export const getAuthorizationUrl = () => {
     const scope = [
