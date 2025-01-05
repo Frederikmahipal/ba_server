@@ -17,7 +17,11 @@ const port = 4000;
 connectDB();
 
 const corsOptions = {
-    origin: 'https://client-sepia-xi-77.vercel.app',
+    origin: [
+        'https://client-sepia-xi-77.vercel.app',                                          // Production URL
+        'https://client-7xd81ltpe-frederiks-projects-6d4123e7.vercel.app',               // Deployment URL
+        'http://localhost:5173'                                                           // Local development
+    ],
     credentials: true
 };
 
