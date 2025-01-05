@@ -7,6 +7,7 @@ import spotifyRoutes from './routes/spotifyRoutes.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { spotifyApiLimiter } from './middleware/rateLimiter.js';
+import session from 'express-session';
 
 dotenv.config();
 
@@ -17,13 +18,32 @@ connectDB();
 
 const corsOptions = {
     origin: ['http://localhost:5173', 'https://client-sepia-xi-77.vercel.app'],
-    credentials: true, 
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 };
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Set trust proxy for Vercel deployment
+app.set('trust proxy', 1);
+
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    proxy: true, // Required for Vercel
+    cookie: {
+        secure: true, // Always use secure in production
+        sameSite: 'none', // Required for cross-site cookies
+        maxAge: 24 * 60 * 60 * 1000,
+        httpOnly: true,
+        domain: '.vercel.app' // Match your domain
+    }
+}));
 
 app.use('/auth', authRoutes);
 app.use('/api/users', userRoutes); 

@@ -1,5 +1,7 @@
 import { signup, login, logout, checkAuth, handleSpotifyLogin } from '../services/authService.js';
 import { getAuthorizationUrl, getAccessToken } from '../config/spotifyAuth.js';
+import { getSpotifyUserProfile } from '../services/spotifyService.js';
+import { User } from '../models/userModel.js';
 
 export const signupController = async (req, res) => {
     try {
@@ -52,42 +54,53 @@ export const spotifyLoginController = (req, res) => {
 };
 
 export const spotifyCallbackController = async (req, res) => {
-    const { code } = req.query;
-
-    if (!code) {
-        return res.status(400).json({ error: 'No code provided' });
-    }
-
     try {
+        const { code } = req.query;
+        if (!code) {
+            console.error('No code received from Spotify');
+            return res.redirect('https://client-sepia-xi-77.vercel.app/auth?error=no_code');
+        }
+
         const accessToken = await getAccessToken(code);
-        const result = await handleSpotifyLogin(accessToken);
+        if (!accessToken) {
+            console.error('Failed to get access token');
+            return res.redirect('https://client-sepia-xi-77.vercel.app/auth?error=no_token');
+        }
 
-        // Set regular auth cookies
-        res.cookie('accessToken', result.accessToken, { 
-            httpOnly: true, 
-            secure: false, 
-            sameSite: 'Strict', 
-            path: '/', 
-            expires: new Date(Date.now() + 3600000)
-        });
-
-        // Set Spotify-specific cookies
-        res.cookie('spotifyAccessToken', result.spotifyAccessToken, { 
-            httpOnly: true, 
-            secure: false, 
-            sameSite: 'Strict', 
-            path: '/'
-        });
-
-
-        const redirectUrl = 'https://client-sepia-xi-77.vercel.app';
-        res.redirect(redirectUrl);
+        // Get user profile from Spotify
+        const spotifyUser = await getSpotifyUserProfile(accessToken);
         
-    } catch (error) {
-        console.error('Error handling Spotify login:', error);
-        res.status(500).json({ 
-            error: 'Failed to handle Spotify login', 
-            details: error.message 
+        let user = await User.findOne({ spotifyId: spotifyUser.id });
+        if (!user) {
+            user = new User({
+                spotifyId: spotifyUser.id,
+                email: spotifyUser.email,
+                name: spotifyUser.display_name,
+                accessToken
+            });
+        } else {
+            user.accessToken = accessToken;
+        }
+        await user.save();
+
+        // Set cookies with production-safe settings
+        res.cookie('accessToken', accessToken, { 
+            httpOnly: true, 
+            secure: true,  // Always true for production
+            sameSite: 'none',  // Required for cross-site cookies
+            path: '/', 
+            expires: new Date(Date.now() + 3600000) // 1 hour
         });
+
+        // Set session cookie with same settings
+        req.session.cookie.secure = true;
+        req.session.cookie.sameSite = 'none';
+        req.session.userId = user._id;
+
+        // Redirect to frontend
+        res.redirect('https://client-sepia-xi-77.vercel.app');
+    } catch (error) {
+        console.error('Spotify callback error:', error);
+        res.redirect('https://client-sepia-xi-77.vercel.app/auth?error=callback_failed');
     }
 };
