@@ -8,11 +8,11 @@
     ],
     "routes": [
       {
-        "src": "/auth/spotify/login",
+        "src": "/auth/spotify/login(.*)",
         "dest": "./app.js"
       },
       {
-        "src": "/auth/spotify/callback",
+        "src": "/auth/spotify/callback(.*)",
         "dest": "./app.js"
       },
       {
