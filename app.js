@@ -17,20 +17,8 @@ const port = 4000;
 connectDB();
 
 const corsOptions = {
-    origin: ['http://localhost:5173', 'https://client-sepia-xi-77.vercel.app'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-        'Content-Type',
-        'Authorization',
-        'X-Requested-With',
-        'Accept',
-        'Origin',
-        'Access-Control-Allow-Headers',
-        'Access-Control-Request-Method',
-        'Access-Control-Request-Headers',
-        'Access-Control-Allow-Credentials'
-    ]
+    origin: 'https://client-sepia-xi-77.vercel.app',
+    credentials: true
 };
 
 app.use(cors(corsOptions));
