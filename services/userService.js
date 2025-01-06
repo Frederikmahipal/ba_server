@@ -1,6 +1,5 @@
-import User from '../models/user.js'; // Import the User model
+import User from '../models/user.js'; 
 
-// Service to get current user profile
 export const getProfileService = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -13,7 +12,6 @@ export const getProfileService = async (userId) => {
   }
 };
 
-// Service to update user profile
 export const updateProfileService = async (userId, profileData) => {
   try {
     const user = await User.findByIdAndUpdate(userId, profileData, { new: true });
@@ -117,14 +115,9 @@ export const getFeed = async (userId) => {
         const user = await User.findById(userId)
             .populate('followedUsers', 'name profilePicture');
 
-        // Get followed users' recent activity
-        // This is where you'd implement your activity tracking
-        // For now, we'll return a basic structure
-
         const feed = {
             followedUsers: user.followedUsers,
             followedArtists: user.followedArtists,
-            // You can add more feed items here later
         };
 
         return feed;

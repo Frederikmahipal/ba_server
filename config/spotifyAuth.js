@@ -19,7 +19,7 @@ export const getAuthorizationUrl = () => {
         'user-read-currently-playing',
         'user-modify-playback-state',
         'streaming',
-        'app-remote-control', // Add this scope
+        'app-remote-control', 
         'user-read-playback-position',
         'user-top-read',
         'user-read-recently-played'
@@ -34,7 +34,7 @@ export const getAccessToken = async (code) => {
     const data = qs.stringify({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: redirectUri, // Must match what is registered
+        redirect_uri: redirectUri, 
         client_id: clientId,
         client_secret: clientSecret
     });

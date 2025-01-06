@@ -189,7 +189,7 @@ export const startPlaybackService = async (deviceId, playbackData, accessToken) 
         
         const response = await axios.put(
             `${SPOTIFY_BASE_URL}/me/player/play?device_id=${deviceId}`,
-            playbackData,  // contains context_uri or uris, and offset if needed
+            playbackData,  // contains context_uri
             {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -273,7 +273,7 @@ export const skipToNextService = async (accessToken) => {
     try {
         const response = await axios.post(
             `${SPOTIFY_BASE_URL}/me/player/next`,
-            {},  // empty body
+            {},  
             {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -292,7 +292,7 @@ export const skipToPreviousService = async (accessToken) => {
     try {
         const response = await axios.post(
             `${SPOTIFY_BASE_URL}/me/player/previous`,
-            {},  // empty body
+            {},  
             {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
