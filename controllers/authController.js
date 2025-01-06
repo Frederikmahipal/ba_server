@@ -14,23 +14,35 @@ export const signupController = async (req, res) => {
 export const loginController = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const { user, accessToken, refreshToken } = await login(email, password);
+        const { user, accessToken } = await login(email, password);
 
-        // Set the tokens in the cookies
-        res.cookie('accessToken', accessToken, { httpOnly: true, secure: false, sameSite: 'Strict', path: '/', expires: new Date(Date.now() + 3600000) }); // 1 hour
-        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: false, sameSite: 'Strict', path: '/', expires: new Date(Date.now() + 2592000000) }); // 30 days
+        res.cookie('accessToken', accessToken, { 
+            httpOnly: true,           // Prevents JavaScript access
+            secure: true,             // Required for HTTPS
+            sameSite: 'none',         // Required for cross-site cookies
+            path: '/',                // Available on all paths
+            expires: new Date(Date.now() + 3600000) // 1 hour
+        }); 
 
-        res.status(200).json({ user, accessToken, refreshToken });
+
+
+        res.status(200).json({ user });
     } catch (err) {
+        console.error('Login error:', err);
         res.status(400).json({ error: err.message });
     }
 };
 
 export const logoutController = async (req, res) => {
     try {
-        res.clearCookie('accessToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
-        res.clearCookie('refreshToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
-        res.status(200).json({ success: true, message: "Signed out successfully" });
+        res.clearCookie('accessToken', { 
+            httpOnly: true, 
+            secure: true,
+            sameSite: 'none',
+            path: '/' 
+        });
+
+        res.status(200).json({ message: "Logged out successfully" });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -47,8 +59,8 @@ export const checkAuthController = async (req, res) => {
 };
 
 export const spotifyLoginController = (req, res) => {
-    const authUrl = getAuthorizationUrl(); // Get the authorization URL
-    res.redirect(authUrl); // Redirect user to Spotify login
+    const authUrl = getAuthorizationUrl(); 
+    res.redirect(authUrl); 
 };
 
 export const spotifyCallbackController = async (req, res) => {
@@ -62,16 +74,16 @@ export const spotifyCallbackController = async (req, res) => {
         const accessToken = await getAccessToken(code);
         const result = await handleSpotifyLogin(accessToken);
 
-        // Set regular auth cookies
+        // Set auth token
         res.cookie('accessToken', result.accessToken, { 
             httpOnly: true, 
-            secure: false, 
-            sameSite: 'Strict', 
-            path: '/', 
+            secure: true,
+            sameSite: 'none',
+            path: '/',
             expires: new Date(Date.now() + 3600000)
         });
 
-        // Set Spotify-specific cookies
+        // Set Spotify token
         res.cookie('spotifyAccessToken', result.spotifyAccessToken, { 
             httpOnly: true, 
             secure: false, 

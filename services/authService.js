@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import User from '../models/user.js'; // Adjust the import path as necessary
+import User from '../models/user.js'; 
 import axios from 'axios';
 
 const generateAccessToken = (userId) => {
@@ -10,12 +10,6 @@ const generateAccessToken = (userId) => {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
-const generateRefreshToken = (userId) => {
-    if (!process.env.JWT_REFRESH_SECRET) {
-        throw new Error("JWT_REFRESH_SECRET is not defined");
-    }
-    return jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
-};
 
 export const signup = async (name, email, password) => {
     const existingUser = await User.findOne({ email });
@@ -48,14 +42,12 @@ export const login = async (email, password) => {
     }
 
     const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
 
     return { user, accessToken, refreshToken };
 };
 
 export const logout = async (res) => {
     res.clearCookie('accessToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: false, sameSite: 'Strict', path: '/' });
     return { success: true, message: "Signed out successfully" };
 };
 
@@ -120,11 +112,9 @@ export const handleSpotifyLogin = async (accessToken) => {
         
     } catch (error) {
         console.error('Error handling Spotify login:', error);
-        throw new Error('Failed to handle Spotify login');
     }
 };
 
-// Function to fetch Spotify user data
 const fetchSpotifyUserData = async (accessToken) => {
     const response = await axios.get('https://api.spotify.com/v1/me', {
         headers: { Authorization: `Bearer ${accessToken}` }
