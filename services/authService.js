@@ -43,7 +43,7 @@ export const login = async (email, password) => {
 
     const accessToken = generateAccessToken(user._id);
 
-    return { user, accessToken, refreshToken };
+    return { user, accessToken };
 };
 
 export const logout = async (res) => {
