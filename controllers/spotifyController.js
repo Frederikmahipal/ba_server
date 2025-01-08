@@ -28,6 +28,7 @@ import dotenv from 'dotenv';
 import { cacheService } from '../services/cacheService.js';
 import { invalidatePlaylistCache } from '../services/cacheService.js';
 import axios from 'axios';
+import { invalidateUserCaches } from '../services/cacheService.js';
 dotenv.config();
 
 //client access token
@@ -157,7 +158,6 @@ export const getAlbum = async (req, res) => {
 };
 
 
-
 export const getUserPlaylists = async (req, res) => {
   try {
     const accessToken = req.headers.authorization?.split(' ')[1];
@@ -166,7 +166,6 @@ export const getUserPlaylists = async (req, res) => {
       return res.status(401).json({ error: 'No access token provided' });
     }
 
-    // Extract user ID from the token or use a fallback
     let cacheKey = 'playlists:global';
     if (req.user?.id) {
       cacheKey = `playlists:user:${req.user.id}`;
@@ -416,12 +415,10 @@ export const getRelatedArtists = async (req, res) => {
         console.error('Error getting related artists:', error);
         res.status(500).json({ error: 'Failed to get related artists' });
     }
-};
+};  
 
 export const getRecommendedArtists = async (req, res) => {
   try {
-
-
     const cacheKey = `recommendations:${req.user.id}`;
     const cachedRecommendations = cacheService.get(cacheKey);
     if (cachedRecommendations) {
@@ -647,11 +644,8 @@ export const createPlaylist = async (req, res) => {
         const userId = userResponse.data.id;
         const playlist = await createPlaylistService(userId, name, accessToken);
         
-        // Invalidate all playlist-related caches
-        cacheService.del('playlists:global');
-        cacheService.del(`playlists:user:${userId}`);
+        invalidateUserCaches(userId);
         
-        // Return the newly created playlist along with a flag
         res.status(201).json({
             playlist,
             isNew: true
@@ -664,3 +658,5 @@ export const createPlaylist = async (req, res) => {
         });
     }
 };
+
+

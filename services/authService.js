@@ -74,7 +74,6 @@ export const handleSpotifyLogin = async (accessToken) => {
         const userData = await fetchSpotifyUserData(accessToken);
         let user = await User.findOne({ email: userData.email });
 
-        // Get the web player token
         const webPlayerResponse = await axios.get('https://open.spotify.com/get_access_token', {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -89,7 +88,7 @@ export const handleSpotifyLogin = async (accessToken) => {
                 spotifyId: userData.id,
                 accessToken: accessToken,
                 profilePicture: profilePicture,
-                webPlayerToken: webPlayerResponse.data.accessToken // Store web player token
+                webPlayerToken: webPlayerResponse.data.accessToken 
             });
         } else {
             user.spotifyId = userData.id;
