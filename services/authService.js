@@ -21,7 +21,9 @@ export const signup = async (name, email, password) => {
     const newUser = new User({ 
         name, 
         email, 
-        password: hashedPassword
+        password: hashedPassword,
+        spotifyId: null,
+        accessToken: null
     });
     await newUser.save();
     return newUser;
