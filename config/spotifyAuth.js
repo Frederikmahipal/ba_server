@@ -38,7 +38,7 @@ export const getAccessToken = async (code) => {
         client_id: clientId,
         client_secret: clientSecret
     });
-    
+
     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
     try {
