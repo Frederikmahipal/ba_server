@@ -6,6 +6,7 @@ const router = express.Router();
 router.get('/check-auth', checkAuthController); 
 router.get('/spotify/login', spotifyLoginController); 
 router.get('/spotify/callback', spotifyCallbackController); 
+router.post('/signup', signupController);
 router.post('/login', loginController);
 router.post('/logout', logoutController);
 
