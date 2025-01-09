@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         index: { 
             unique: true,
-            sparse: true  
+            partialFilterExpression: { spotifyId: { $type: "string" } }  // Only enforce uniqueness when spotifyId is a string
         }
     },
     accessToken: {
