@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema({
     },
     spotifyId: {
         type: String,
-        unique: true
+        unique: true,
+        sparse: true
     },
     accessToken: {
         type: String
